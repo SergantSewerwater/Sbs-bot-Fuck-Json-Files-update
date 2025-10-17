@@ -10,5 +10,4 @@ aiohttp>=3.8.5
 aiofiles>=23.1.0
 pydub>=0.25.1
 difflib>=1.2.9
-
-
+supabase>=2.22.0
