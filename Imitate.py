@@ -203,6 +203,43 @@ class Imitate(commands.Cog):
 
         await interaction.response.send_message(embed=embed)
 
+    # ---------------- /add_imitation ----------------
+    @app_commands.command(name="add_imitation", description="Add a new imitation")
+    @app_commands.describe(name="Name of the person to imitate", imitation="The imitation quote")
+    async def add_imitation(self, interaction: discord.Interaction, name: str, imitation: str):
+        if interaction.guild_id != GUILD_ID:
+            await interaction.response.send_message("❌ This command can only be used in the official server.", ephemeral=True)
+            return
+        
+        name = name.strip()
+        imitation = imitation.strip()
+        # add new imitation to supabase where name is type text and quotes is type text[]
+        try:
+            existing = supabase.table("imitations").select("*").eq("name", name).execute()
+            data = existing.data or []
+            if data:
+                quotes = data[0].get("imitations") or []
+                if isinstance(quotes, str):
+                    import json
+                    try:
+                        quotes = json.loads(quotes)
+                    except Exception:
+                        quotes = [quotes]
+                quotes.append(imitation)
+                supabase.table("imitations").update({"imitations": quotes}).eq("name", name).execute()
+            else:
+                supabase.table("imitations").insert({"name": name, "imitations": [imitation]}).execute()
+
+            self.imitations = fetch_imitations()
+            self.imitations_lower = {k.lower(): v for k, v in self.imitations.items()}
+
+            await interaction.response.send_message(f"✅ Added imitation for **{name}**!", ephemeral=True)
+        except Exception as e:
+            logger.exception(f"Failed to add imitation: {e}")
+            await interaction.response.send_message(f"❌ Failed to add imitation: {e}", ephemeral=True)
+
+        self.imitations = fetch_imitations()
+
     # ---------------- /reload_data ----------------
     @app_commands.command(name="reload_data", description="Reload imitation and points data from Supabase")
     async def reload_data(self, interaction: discord.Interaction):
