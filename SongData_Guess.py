@@ -29,7 +29,7 @@ def fetch_points():
             user_id = str(row.get("user_id"))
             points[user_id] = {
                 "name": row.get("name", "Unknown#0000"),
-                "points": int(round(float(row.get("points", 0))))
+                "points": int(row.get("points", 0))
             }
         return points
     except Exception as e:
@@ -40,7 +40,7 @@ def save_points(points):
     """Upsert (update or insert) all points into Supabase with ints."""
     try:
         payload = [
-            {"user_id": uid, "name": data["name"], "points": int(round(data["points"]))}
+            {"user_id": uid, "name": data["name"], "points": int(data["points"])}
             for uid, data in points.items()
         ]
         if payload:

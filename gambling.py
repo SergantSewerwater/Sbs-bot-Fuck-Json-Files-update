@@ -16,7 +16,6 @@ supabase: Client = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
 OWNER_IDS = ["1279417773013078098", "1117143387695497278", "703364595321929730"]
 
 # ---------------------- POINTS HELPERS ----------------------
-# ok copilot what the fuck
 def fetch_points():
     """Load all points from Supabase (normalize to ints)."""
     res = supabase.table("points").select("*").execute()
@@ -24,7 +23,7 @@ def fetch_points():
     for row in (res.data or []):
         points[str(row["user_id"])] = {
             "name": row.get("name", "Unknown"),
-            "points": int(round(float(row.get("points", 0))))
+            "points": int(row.get("points", 0))
         }
     return points
 
@@ -35,7 +34,7 @@ def save_points(points: dict):
         payload.append({
             "user_id": user_id,
             "name": info.get("name", "Unknown"),
-            "points": int(round(info.get("points", 0)))
+            "points": int(info.get("points", 0))
         })
     if payload:
         supabase.table("points").upsert(payload).execute()
