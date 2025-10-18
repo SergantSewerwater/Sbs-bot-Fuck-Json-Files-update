@@ -149,7 +149,6 @@ class SongDataGuess(commands.Cog):
             else:
                 self.points[user_id]["points"] -= 1
                 save_points(self.points)
-                self.points = fetch_points()
                 try:
                     await msg.add_reaction("❌")
                 except discord.Forbidden:
@@ -194,7 +193,6 @@ class SongDataGuess(commands.Cog):
             self.points[user_id] = {"name": msg.author.name, "points": 0}
         self.points[user_id]["points"] += points_awarded
         save_points(self.points)
-        self.points = fetch_points()
 
         await interaction.channel.send(
             f"✅ Correct! {msg.author.mention} gets **{points_awarded} Slop Point(s)**!\n"
@@ -204,10 +202,12 @@ class SongDataGuess(commands.Cog):
     # Commands
     @app_commands.command(name="guess_gdsong_key", description="Guess the key and BPM of a random GD song")
     async def guess_gdsong_key(self, interaction: discord.Interaction):
+        self.all_points = fetch_points()
         await self._run_guess_game(interaction, "gdsongdata", "GD songs")
 
     @app_commands.command(name="guess_non_gdsong_key", description="Guess the key and BPM of a random non-GD song")
     async def guess_non_gdsong_key(self, interaction: discord.Interaction):
+        self.all_points = fetch_points()
         await self._run_guess_game(interaction, "nongdsongdata", "Non-GD songs")
 
 # ---------------------- SETUP ----------------------

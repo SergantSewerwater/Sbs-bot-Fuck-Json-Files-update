@@ -107,6 +107,7 @@ class Imitate(commands.Cog):
     # ---------------- /imitate_game ----------------
     @app_commands.command(name="imitate_game", description="Start an imitation game")
     async def imitate_game(self, interaction: discord.Interaction):
+        self.points = fetch_points()
         if self.active_game:
             await interaction.response.send_message("A game is already active!", ephemeral=True)
             return
@@ -162,7 +163,6 @@ class Imitate(commands.Cog):
             self.points[user_id]["points"] += points_awarded
             self.points[user_id]["name"] = username
             save_points(self.points)
-            self.points = fetch_points()
 
             await message.reply(f"✅ You won! You now have {self.points[user_id]['points']} Slop Points. (+{points_awarded})")
             self.active_game = None
@@ -174,7 +174,6 @@ class Imitate(commands.Cog):
                 self.points[user_id] = {"name": username, "points": 0}
             self.points[user_id]["points"] -= 1
             save_points(self.points)
-            self.points = fetch_points()
             try:
                 await message.add_reaction("❌")
             except discord.Forbidden:
