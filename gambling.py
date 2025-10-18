@@ -23,7 +23,7 @@ def fetch_points():
     for row in res.data:
         points[str(row["user_id"])] = {
             "name": row.get("name", "Unknown"),
-            "points": float(row.get("points", 0))
+            "points": row.get("points", 0)
         }
     return points
 
@@ -33,7 +33,7 @@ def save_points(points: dict):
         supabase.table("points").upsert({
             "user_id": user_id,
             "name": info.get("name", "Unknown"),
-            "points": math.ceil(info.get("points", 0))
+            "points": info.get("points", 0)
         }).execute()
 
 
