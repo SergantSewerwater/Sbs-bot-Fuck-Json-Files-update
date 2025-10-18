@@ -16,25 +16,29 @@ supabase: Client = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
 OWNER_IDS = ["1279417773013078098", "1117143387695497278", "703364595321929730"]
 
 # ---------------------- POINTS HELPERS ----------------------
+# ok copilot what the fuck
 def fetch_points():
-    """Load all points from Supabase"""
+    """Load all points from Supabase (normalize to ints)."""
     res = supabase.table("points").select("*").execute()
     points = {}
-    for row in res.data:
+    for row in (res.data or []):
         points[str(row["user_id"])] = {
             "name": row.get("name", "Unknown"),
-            "points": row.get("points", 0)
+            "points": int(round(float(row.get("points", 0))))
         }
     return points
 
 def save_points(points: dict):
-    """Upsert points to Supabase"""
+    """Upsert points to Supabase (store ints)."""
+    payload = []
     for user_id, info in points.items():
-        supabase.table("points").upsert({
+        payload.append({
             "user_id": user_id,
             "name": info.get("name", "Unknown"),
-            "points": info.get("points", 0)
-        }).execute()
+            "points": int(round(info.get("points", 0)))
+        })
+    if payload:
+        supabase.table("points").upsert(payload).execute()
 
 
 # ---------------------- GAMBLING COG ----------------------
@@ -76,11 +80,19 @@ class Gambling(commands.Cog):
 
         if outcome == color:
             winnings = points * 4 if color == 'green' else points
-            # Deduct proportionally from owners with enough points
-            payers = [oid for oid in OWNER_IDS if all_points.get(oid, {}).get("points", 0) >= winnings / len(OWNER_IDS)]
-            if payers:
-                for oid in payers:
-                    all_points[oid]["points"] -= winnings / len(payers)
+
+            # Owners that have any balance
+            payers = [oid for oid in OWNER_IDS if all_points.get(oid, {}).get("points", 0) > 0]
+            total_pool = sum(all_points.get(oid, {}).get("points", 0) for oid in payers)
+
+            if payers and total_pool >= winnings:
+                # Split winnings as evenly as possible (integers), distribute remainder
+                per = winnings // len(payers)
+                rem = winnings - per * len(payers)
+                for i, oid in enumerate(payers):
+                    deduction = per + (1 if i < rem else 0)
+                    deduction = min(deduction, all_points[oid]["points"])
+                    all_points[oid]["points"] -= deduction
                 all_points[user_id]["points"] += winnings
                 await interaction.response.send_message(
                     f"You won! You now have {all_points[user_id]['points']} Slop Points."
@@ -88,12 +100,32 @@ class Gambling(commands.Cog):
             else:
                 await interaction.response.send_message("The banks have run out of money.")
         else:
-            # Deduct losses proportionally from owners
+            # Distribute player's loss across owners proportionally (integers)
             losers = [oid for oid in OWNER_IDS if all_points.get(oid, {}).get("points", 0) > 0]
-            if losers:
+            total_pool = sum(all_points.get(oid, {}).get("points", 0) for oid in losers)
+
+            remaining = points
+            if losers and total_pool > 0:
+                # First pass: proportional integer shares
+                taken = {}
                 for oid in losers:
-                    loss_per_owner = points / len(losers)
-                    all_points[oid]["points"] -= loss_per_owner
+                    owner_points = all_points[oid]["points"]
+                    share = int((owner_points * points) / total_pool)
+                    share = min(share, owner_points, remaining)
+                    taken[oid] = share
+                    remaining -= share
+                # Distribute any leftover 1-by-1 to owners that still have balance
+                for oid in losers:
+                    if remaining <= 0:
+                        break
+                    if all_points[oid]["points"] - taken.get(oid, 0) > 0:
+                        taken[oid] = taken.get(oid, 0) + 1
+                        remaining -= 1
+                # Apply deductions
+                for oid, ded in taken.items():
+                    all_points[oid]["points"] -= ded
+
+            # Finally, deduct the player's points (always integer)
             all_points[user_id]["points"] -= points
             await interaction.response.send_message(
                 f"You lost! You now have {all_points[user_id]['points']} Slop Points."

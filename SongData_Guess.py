@@ -5,8 +5,12 @@ from discord.ext import commands
 import random
 import asyncio
 import math
+import logging
 from supabase import create_client, Client
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 # ---------------------- SUPABASE INIT ----------------------
 load_dotenv()
@@ -16,22 +20,33 @@ supabase: Client = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
 
 # ---------------------- DATA FETCHERS ----------------------
 def fetch_points():
-    """Load all user points from Supabase"""
-    res = supabase.table("points").select("*").execute()
-    points = {}
-    for row in res.data:
-        user_id = str(row["user_id"])
-        points[user_id] = {"name": row.get("name", "Unknown"), "points": row.get("points", 0)}
-    return points
+    """Fetch user points from Supabase."""
+    try:
+        response = supabase.table("points").select("*").execute()
+        data = response.data or []
+        points = {}
+        for row in data:
+            user_id = str(row.get("user_id"))
+            points[user_id] = {
+                "name": row.get("name", "Unknown#0000"),
+                "points": int(round(float(row.get("points", 0))))
+            }
+        return points
+    except Exception as e:
+        logger.exception(f"Failed to fetch points: {e}")
+        return {}
 
 def save_points(points):
-    """Push updated points back to Supabase"""
-    for user_id, info in points.items():
-        supabase.table("points").upsert({
-            "user_id": user_id,
-            "name": info.get("name", "Unknown"),
-            "points": math.ceil(info.get("points", 0))
-        }).execute()
+    """Upsert (update or insert) all points into Supabase with ints."""
+    try:
+        payload = [
+            {"user_id": uid, "name": data["name"], "points": int(round(data["points"]))}
+            for uid, data in points.items()
+        ]
+        if payload:
+            supabase.table("points").upsert(payload, on_conflict="user_id").execute()
+    except Exception as e:
+        logger.exception(f"Failed to save points: {e}")
 
 def fetch_songdata(table_name: str):
     """Fetch song data from the specified Supabase table"""
