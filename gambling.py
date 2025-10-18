@@ -44,8 +44,7 @@ class Gambling(commands.Cog):
 
     @app_commands.command(name="gamble", description="LET'S GO GAMBLING!!!!!")
     @app_commands.describe(points="How many Slop Points to gamble", color="Choose red, black, or green")
-    async def gamble(self, interaction: discord.Interaction, points: float, color: str):
-        points = math.ceil(points)
+    async def gamble(self, interaction: discord.Interaction, points: int, color: str):
         if points < 0:
             await interaction.response.send_message("You cannot gamble a negative amount of Slop Points.")
             return
