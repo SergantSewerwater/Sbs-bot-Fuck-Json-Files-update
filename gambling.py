@@ -45,6 +45,7 @@ def save_points(points: dict):
 class Gambling(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.all_points = fetch_points()
 
     @app_commands.command(name="gamble", description="LET'S GO GAMBLING!!!!!")
     @app_commands.describe(points="How many Slop Points to gamble", color="Choose red, black, or green")
@@ -55,17 +56,16 @@ class Gambling(commands.Cog):
             return
 
         user_id = str(interaction.user.id)
-        all_points = fetch_points()
 
         if user_id in OWNER_IDS:
             await interaction.response.send_message(f"Ur in the 1% dont gamble away your riches bro")
             return
 
-        if user_id not in all_points or all_points[user_id]["points"] <= 0:
+        if user_id not in self.all_points or self.all_points[user_id]["points"] <= 0:
             await interaction.response.send_message("Broke bitch.")
             return
 
-        if all_points[user_id]["points"] - points < 0:
+        if self.all_points[user_id]["points"] - points < 0:
             await interaction.response.send_message("You can't gamble into debt.")
             return
 
@@ -83,20 +83,21 @@ class Gambling(commands.Cog):
             winnings = points * 4 if color == 'green' else points
 
             for oid in OWNER_IDS:
-                all_points[oid]["points"] -= points2
-            all_points[user_id]["points"] += winnings
+                self.all_points[oid]["points"] -= points2
+            self.all_points[user_id]["points"] += winnings
             await interaction.response.send_message(
-                f"You won! You now have {all_points[user_id]['points']} Slop Points."
+                f"You won! You now have {self.all_points[user_id]['points']} Slop Points."
             )
         else:
             for oid in OWNER_IDS:
-                all_points[oid]["points"] += points2
-            all_points[user_id]["points"] -= points
+                self.all_points[oid]["points"] += points2
+            self.all_points[user_id]["points"] -= points
             await interaction.response.send_message(
-                f"You lost! You now have {all_points[user_id]['points']} Slop Points."
+                f"You lost! You now have {self.all_points[user_id]['points']} Slop Points."
             )
 
-        save_points(all_points)
+        save_points(self.all_points)
+        self.all_points = fetch_points()
 
 
 # ---------------------- SETUP ----------------------

@@ -72,9 +72,10 @@ def fetch_songdata(table_name: str):
 class SongDataGuess(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.points = fetch_points()
         self.active_games = {}  # channel_id -> dict
 
-    async def _run_guess_game(self, interaction, table_name: str, label: str):
+    async def _run_guess_game(self, interaction: discord.Interaction, table_name: str, label: str):
         songdata = fetch_songdata(table_name)
         candidates = [s for s, v in songdata.items() if v.get("key") and v.get("bpm")]
         if not candidates:
@@ -120,7 +121,6 @@ class SongDataGuess(commands.Cog):
 
         import time
         start_time = time.monotonic()
-        points = fetch_points()
 
         async def handle_message(msg):
             if msg.channel.id != channel_id or msg.author.bot:
@@ -133,8 +133,8 @@ class SongDataGuess(commands.Cog):
                 return
 
             user_id = str(msg.author.id)
-            if user_id not in points:
-                points[user_id] = {"name": msg.author.name, "points": 0}
+            if user_id not in self.points:
+                self.points[user_id] = {"name": msg.author.name, "points": 0}
 
             correct_bpm = guessed_bpm == bpm
             correct_key = guessed_key == key
@@ -147,8 +147,9 @@ class SongDataGuess(commands.Cog):
                         await msg.add_reaction("✅")
                         await self.end_round(interaction, msg, song, key, bpm, difficulty_val, elapsed, table_name)
             else:
-                points[user_id]["points"] -= 1
-                save_points(points)
+                self.points[user_id]["points"] -= 1
+                save_points(self.points)
+                self.points = fetch_points()
                 try:
                     await msg.add_reaction("❌")
                 except discord.Forbidden:
@@ -188,12 +189,12 @@ class SongDataGuess(commands.Cog):
         max_points = {"easy": 5, "medium": 10, "hard": 15}.get(difficulty, 5)
         points_awarded = max(1, round(max_points * ((30 - elapsed) / 30)))
 
-        points = fetch_points()
         user_id = str(msg.author.id)
-        if user_id not in points:
-            points[user_id] = {"name": msg.author.name, "points": 0}
-        points[user_id]["points"] += points_awarded
-        save_points(points)
+        if user_id not in self.points:
+            self.points[user_id] = {"name": msg.author.name, "points": 0}
+        self.points[user_id]["points"] += points_awarded
+        save_points(self.points)
+        self.points = fetch_points()
 
         await interaction.channel.send(
             f"✅ Correct! {msg.author.mention} gets **{points_awarded} Slop Point(s)**!\n"
