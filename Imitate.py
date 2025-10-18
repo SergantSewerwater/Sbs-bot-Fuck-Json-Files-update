@@ -182,6 +182,7 @@ class Imitate(commands.Cog):
     # ---------------- /imitate_points ----------------
     @app_commands.command(name="imitate_points", description="Check your Slop Points")
     async def imitate_points(self, interaction: discord.Interaction):
+        self.points = fetch_points()
         user_id = str(interaction.user.id)
         data = self.points.get(user_id, {"name": str(interaction.user), "points": 0})
         await interaction.response.send_message(f"You have {data['points']} points.")
@@ -189,6 +190,7 @@ class Imitate(commands.Cog):
     # ---------------- /imitate_leaderboard ----------------
     @app_commands.command(name="imitate_leaderboard", description="Show the Slop Points leaderboard")
     async def imitate_leaderboard(self, interaction: discord.Interaction):
+        self.points = fetch_points()
         if not self.points:
             await interaction.response.send_message("No one has any Slop Points yet!", ephemeral=True)
             return
