@@ -53,7 +53,7 @@ class Gambling(commands.Cog):
         all_points = fetch_points()
 
         if user_id in OWNER_IDS:
-            await interaction.response.send_message("Ur in the 1% dont gamble away your riches bro")
+            await interaction.response.send_message(f"Ur in the 1% dont gamble away your riches bro")
             return
 
         if user_id not in all_points or all_points[user_id]["points"] <= 0:
@@ -75,7 +75,7 @@ class Gambling(commands.Cog):
         outcome = random.choices(['red', 'black', 'green'], weights=[49.5, 49.5, 1], k=1)[0]
 
         if outcome == color:
-            winnings = points * 4 if color == 'green' else points * 2
+            winnings = points * 4 if color == 'green' else points
             # Deduct proportionally from owners with enough points
             payers = [oid for oid in OWNER_IDS if all_points.get(oid, {}).get("points", 0) >= winnings / len(OWNER_IDS)]
             if payers:
