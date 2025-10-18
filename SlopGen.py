@@ -77,7 +77,8 @@ COGS = [
     "pitchnstretch",
     "SlopGenReal",
     "gambling",
-    "SongData_Guess"
+    "SongData_Guess",
+    "ping_shlant"
 ]
 
 # --- Events ---
