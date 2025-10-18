@@ -1,0 +1,10 @@
+# python stuff
+.venv
+__pycache__
+.env
+discord.log
+temp_audio
+
+# credentials files
+credentials.json
+goodmashup_credentials.json
