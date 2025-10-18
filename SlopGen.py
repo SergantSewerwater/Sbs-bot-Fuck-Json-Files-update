@@ -75,10 +75,12 @@ COGS = [
     "semitone_calculator",
     "Imitate",
     "pitchnstretch",
+    "jsondump",
     "SlopGenReal",
     "gambling",
     "SongData_Guess",
-    "ping_shlant"
+    "MakeSfhMoreLikeGdmToRagebaitShlant",
+    "ping_shlant",
 ]
 
 # --- Events ---
@@ -119,7 +121,7 @@ async def on_message(message):
         current_count = await get_misc_value("ping_count", 0)
         new_count = current_count + 1
         await set_misc_value("ping_count", new_count)
-        await message.channel.send(f"Pong!\n-# Count: {new_count}")
+        await message.channel.send(f"Pong!")
 
         return
 
