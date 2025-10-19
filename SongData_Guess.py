@@ -229,13 +229,4 @@ async def setup(bot: commands.Bot):
     cog = SongDataGuess(bot)
     await bot.add_cog(cog)
 
-    # Sync the command tree for the test server so commands show up quickly.
-    # If you want global commands, remove the guild param and call bot.tree.sync().
-    try:
-        guild = discord.Object(id=TEST_SERVER_ID)
-        bot.tree.add_command(cog.guess_gdsong_key, guild=guild)
-        bot.tree.add_command(cog.guess_non_gdsong_key, guild=guild)
-        await bot.tree.sync(guild=guild)
-        print("Synced guild commands for test server.")
-    except Exception as e:
-        print(f"Failed to sync commands to guild {TEST_SERVER_ID}: {e}")
+
