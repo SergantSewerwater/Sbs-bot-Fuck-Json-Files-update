@@ -5,12 +5,11 @@ from discord.ext import commands
 import random
 import asyncio
 import math
-import logging
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+
+TEST_SERVER_ID = 1411767823730085971
 
 # ---------------------- SUPABASE INIT ----------------------
 load_dotenv()
@@ -20,33 +19,22 @@ supabase: Client = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
 
 # ---------------------- DATA FETCHERS ----------------------
 def fetch_points():
-    """Fetch user points from Supabase."""
-    try:
-        response = supabase.table("points").select("*").execute()
-        data = response.data or []
-        points = {}
-        for row in data:
-            user_id = str(row.get("user_id"))
-            points[user_id] = {
-                "name": row.get("name", "Unknown#0000"),
-                "points": int(row.get("points", 0))
-            }
-        return points
-    except Exception as e:
-        logger.exception(f"Failed to fetch points: {e}")
-        return {}
+    """Load all user points from Supabase"""
+    res = supabase.table("points").select("*").execute()
+    points = {}
+    for row in res.data:
+        user_id = str(row["user_id"])
+        points[user_id] = {"name": row.get("name", "Unknown"), "points": row.get("points", 0)}
+    return points
 
 def save_points(points):
-    """Upsert (update or insert) all points into Supabase with ints."""
-    try:
-        payload = [
-            {"user_id": uid, "name": data["name"], "points": int(data["points"])}
-            for uid, data in points.items()
-        ]
-        if payload:
-            supabase.table("points").upsert(payload, on_conflict="user_id").execute()
-    except Exception as e:
-        logger.exception(f"Failed to save points: {e}")
+    """Push updated points back to Supabase"""
+    for user_id, info in points.items():
+        supabase.table("points").upsert({
+            "user_id": user_id,
+            "name": info.get("name", "Unknown"),
+            "points": math.ceil(info.get("points", 0))
+        }).execute()
 
 def fetch_songdata(table_name: str):
     """Fetch song data from the specified Supabase table"""
@@ -72,10 +60,9 @@ def fetch_songdata(table_name: str):
 class SongDataGuess(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.points = fetch_points()
         self.active_games = {}  # channel_id -> dict
 
-    async def _run_guess_game(self, interaction: discord.Interaction, table_name: str, label: str):
+    async def _run_guess_game(self, interaction, table_name: str, label: str):
         songdata = fetch_songdata(table_name)
         candidates = [s for s, v in songdata.items() if v.get("key") and v.get("bpm")]
         if not candidates:
@@ -121,6 +108,7 @@ class SongDataGuess(commands.Cog):
 
         import time
         start_time = time.monotonic()
+        points = fetch_points()
 
         async def handle_message(msg):
             if msg.channel.id != channel_id or msg.author.bot:
@@ -133,8 +121,8 @@ class SongDataGuess(commands.Cog):
                 return
 
             user_id = str(msg.author.id)
-            if user_id not in self.points:
-                self.points[user_id] = {"name": msg.author.name, "points": 0}
+            if user_id not in points:
+                points[user_id] = {"name": msg.author.name, "points": 0}
 
             correct_bpm = guessed_bpm == bpm
             correct_key = guessed_key == key
@@ -147,8 +135,8 @@ class SongDataGuess(commands.Cog):
                         await msg.add_reaction("✅")
                         await self.end_round(interaction, msg, song, key, bpm, difficulty_val, elapsed, table_name)
             else:
-                self.points[user_id]["points"] -= 1
-                save_points(self.points)
+                points[user_id]["points"] -= 1
+                save_points(points)
                 try:
                     await msg.add_reaction("❌")
                 except discord.Forbidden:
@@ -163,51 +151,78 @@ class SongDataGuess(commands.Cog):
         finally:
             self.bot.remove_listener(handle_message, "on_message")
             self.active_games.pop(channel_id, None)
+           
+           
 
-    async def end_round(self, interaction, msg, song, key, bpm, difficulty_val, elapsed, table_name):
-        await interaction.channel.send(
-            "How difficult was this question? Reply with `easy`, `medium`, `hard`, or `none` to skip."
+
+
+
+async def end_round(self, interaction, msg, song, key, bpm, difficulty_val, elapsed, table_name):
+
+    try:
+        response = supabase.table(table_name).select("difficulty").eq("title", song).execute()
+        stored_difficulty = (
+            response.data[0]["difficulty"].lower().strip()
+            if response.data and response.data[0].get("difficulty")
+            else "easy"  # fallback if not set
+        )
+    except Exception as e:
+        print(f"⚠️ Failed to fetch difficulty from Supabase: {e}")
+        stored_difficulty = "easy"
+
+
+    max_points = {"easy": 5, "medium": 10, "hard": 15}.get(stored_difficulty, 5)
+    points_awarded = max(1, round(max_points * ((30 - elapsed) / 30)))
+
+    points = fetch_points()
+    user_id = str(msg.author.id)
+    if user_id not in points:
+        points[user_id] = {"name": msg.author.name, "points": 0}
+
+    points[user_id]["points"] += points_awarded
+    save_points(points)
+
+    await interaction.channel.send(
+        
+        f"✅ Correct! {msg.author.mention} gets **{points_awarded} Slop Point(s)**!\n"
+        f"**Key:** {key.upper()} | **BPM:** {bpm}\n"
+        
+    )
+
+ 
+    await interaction.channel.send(
+        "How difficult was this question? Reply with `easy`, `medium`, `hard`, or `none` to skip updating."
+    )
+
+    def diff_check(m):
+        return (
+            m.author == msg.author
+            and m.channel == interaction.channel
+            and m.content.lower().strip() in ["easy", "medium", "hard", "none"]
         )
 
-        def diff_check(m):
-            return m.channel.id == interaction.channel.id and m.content.lower().strip() in ["easy", "medium", "hard", "none"]
+    try:
+        diff_msg = await self.bot.wait_for("message", timeout=15.0, check=diff_check)
+        new_difficulty = diff_msg.content.lower().strip()
+    except asyncio.TimeoutError:
+        new_difficulty = "none"
 
-        try:
-            diff_msg = await self.bot.wait_for("message", timeout=15.0, check=diff_check)
-            difficulty = diff_msg.content.lower().strip()
-        except asyncio.TimeoutError:
-            difficulty = "easy"
+    if new_difficulty != "none":
+        supabase.table(table_name).update({"difficulty": new_difficulty}).eq("title", song).execute()
+        await interaction.channel.send(f"✅ Difficulty updated to **{new_difficulty}** for **{song}**.")
+    else:
+        await interaction.channel.send("Difficulty change skipped.")
 
-        if difficulty != "none":
-            # Update difficulty in Supabase
-            supabase.table(table_name).update({"difficulty": difficulty}).eq("title", song).execute()
-            await interaction.channel.send(f"Difficulty set to **{difficulty}** for **{song}**.")
-        else:
-            await interaction.channel.send("Difficulty change skipped.")
-
-        max_points = {"easy": 5, "medium": 10, "hard": 15}.get(difficulty, 5)
-        points_awarded = max(1, round(max_points * ((30 - elapsed) / 30)))
-
-        user_id = str(msg.author.id)
-        if user_id not in self.points:
-            self.points[user_id] = {"name": msg.author.name, "points": 0}
-        self.points[user_id]["points"] += points_awarded
-        save_points(self.points)
-
-        await interaction.channel.send(
-            f"✅ Correct! {msg.author.mention} gets **{points_awarded} Slop Point(s)**!\n"
-            f"**Key:** {key.upper()} | **BPM:** {bpm}"
-        )
 
     # Commands
     @app_commands.command(name="guess_gdsong_key", description="Guess the key and BPM of a random GD song")
     async def guess_gdsong_key(self, interaction: discord.Interaction):
-        self.all_points = fetch_points()
+        save_points(points)
         await self._run_guess_game(interaction, "gdsongdata", "GD songs")
 
     @app_commands.command(name="guess_non_gdsong_key", description="Guess the key and BPM of a random non-GD song")
     async def guess_non_gdsong_key(self, interaction: discord.Interaction):
-        self.all_points = fetch_points()
+        save_points(points)
         await self._run_guess_game(interaction, "nongdsongdata", "Non-GD songs")
 
 # ---------------------- SETUP ----------------------
