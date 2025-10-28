@@ -81,6 +81,7 @@ COGS = [
     "SongData_Guess",
     "MakeSfhMoreLikeGdmToRagebaitShlant",
     "ping_shlant",
+    "Detect_Slop",
 ]
 
 # --- Events ---
@@ -129,4 +130,3 @@ async def on_message(message):
 
 # --- Run bot ---
 bot.run(token)
-
