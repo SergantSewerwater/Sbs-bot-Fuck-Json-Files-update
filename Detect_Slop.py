@@ -4,17 +4,23 @@ from discord.ext import commands
 
 FORUM_CHANNEL_ID = 1352870773588623404
 
-
 TITLE_PATTERN = re.compile(r"(.+?)\s*-\s*(.+?)\s*x\s*(.+?)\s*-\s*(.+)", re.IGNORECASE)
-
 
 class ForumWatcher(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    def clean_title(self, title: str) -> str:
+        """Trim extra metadata like emojis or info after ':' / '#' / '<' / '('."""
+        title = title.strip()
+        title = re.sub(r"^[^\w]+", "", title)  # remove leading emojis/symbols
+        title = re.split(r"[:#<\(]", title)[0].strip()
+        return title
+
     async def parse_title(self, title: str):
-        """Parse a forum thread title into its four parts."""
-        match = TITLE_PATTERN.match(title)
+        """Parse a forum thread title into GD author/song and real song info."""
+        cleaned_title = self.clean_title(title)
+        match = TITLE_PATTERN.match(cleaned_title)
         if not match:
             return None
         gd_author, gd_song, song_author, song = match.groups()
@@ -26,60 +32,73 @@ class ForumWatcher(commands.Cog):
         }
 
     @commands.Cog.listener()
-    async def on_thread_create(self, thread):
-        """Triggered when a new forum thread is created."""
+    async def on_thread_create(self, thread: discord.Thread):
         if thread.parent_id != FORUM_CHANNEL_ID:
             return
-        
-
 
         parsed = await self.parse_title(thread.name)
         if not parsed:
             print(f"❌ Couldn't parse: {thread.name}")
             return
 
-        print(f"🧩 New thread parsed: {parsed}")
+        # --- Clean and normalize all parts ---
+        gd_author = parsed["gd_author"].lower().strip()
+        gd_song = parsed["gd_song"].lower().strip()
+        song_author = parsed["song_author"].lower().strip()
+        song = parsed["song"].lower().strip()
 
-        prefixes = []
+        print(f"🧩 Parsed title: {parsed}")
 
-        # NON Prefixes
-        if parsed["song_author"].lower() == "Lady Gaga":
+        # Wait for author to post (Option 1)
+        def check(msg: discord.Message):
+            return msg.channel.id == thread.id and msg.author.id == thread.owner_id
+
+        try:
+            await self.bot.wait_for("message", check=check, timeout=3600)
+            print(f"📩 Author posted in '{thread.name}', proceeding...")
+        except TimeoutError:
+            print(f"⌛ Timeout waiting for author in '{thread.name}'. No bot message sent.")
+            return
+
+        # === SINGLE-FIELD MESSAGES ===
+        if song_author == "lady gaga":
             await thread.send("shlant rn: 🤤")
-        if parsed["gd_song"].lower() == "rok taht body":
+        if gd_song == "rok taht body":
             await thread.send("slop that body better")
 
-            # Prefixes
+        # === PREFIX SYSTEM ===
+        prefixes = []
 
-        if parsed["song_author"].lower() == "tech n9ne":
+        # Song author based
+        if song_author == "tech n9ne":
             prefixes.append("Tech N9ne")
-
-        if parsed["song_author"].lower() == "ke$ha" or "kesha":
+        if song_author in ["ke$ha", "kesha"]:
             prefixes.append("Ke$ha")
+        if song_author == "bbno$":
+            prefixes.append("bbno")
 
-        if parsed["song_author"].lower() == "bbno$":
-           prefixes.append("bbno")
+        # GD song based
+        if gd_song == "antipixel":
+            prefixes.append("Antipixel")
+        if gd_song == "flow":
+            prefixes.append("flow")
 
-        if parsed["song"].lower() == "rock that body":
+        # Song based
+        if song == "rock that body":
             prefixes.append("OMG its RTB hahahahahahahahahahahahah lmao loooooool i love that song it is just the best!")
 
-        if parsed["gd_author"].lower() == "uhhh idk any overused gdsong artists":
+        # GD author based
+        if gd_author == "uhhh idk any overused gdsong artists":
             prefixes.append("dude what why did you make this your title")
 
-        if parsed["gd_song"].lower() == "antipixel":
-            prefixes.append("Antipixel")
-        
-        if parsed["gd_song"].lower() == "flow":
-            prefixes.append("flow")
-        
-        if parsed["song_author"].lower() == "knife party" or "koraii"  or "waterflame" and parsed["song"].lower() == "give it up" or "time machine" or "think about it":
+        # Multi-condition checks
+        if song_author in ["knife party", "koraii", "waterflame"] and song in ["give it up", "time machine", "think about it"]:
             prefixes.append("Rap")
 
-        if parsed["song_author"].lower() == "charlie draker & far too loud" or "charlie draker"  or "waterflame" or "paragonx9" and parsed["song"].lower() == "control: crowd" or "crowd control" or "nail gun" or "infiltration":
+        if song_author in ["charlie draker & far too loud", "charlie draker", "waterflame", "paragonx9"] and song in ["control: crowd", "crowd control", "nail gun", "infiltration"]:
             prefixes.append("Fast Rap")
 
-    
-
-
+        # === FINAL MESSAGE ===
         if prefixes:
             final_message = "".join(prefixes) + "slop"
             await thread.send(final_message)
