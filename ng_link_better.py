@@ -16,6 +16,14 @@ formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+# Configure logging for this cog
+logger = logging.getLogger("NewgroundsAudio")
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 
 class NewgroundsAudio(commands.Cog):
     """Cog for fetching and embedding Newgrounds audio files."""
