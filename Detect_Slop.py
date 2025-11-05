@@ -4,7 +4,7 @@ from discord.ext import commands
 
 FORUM_CHANNEL_ID = 1352870773588623404
 
-TITLE_PATTERN = re.compile(r"(.+?)\s*-\s*(.+?)\s*x\s*(.+?)\s*-\s*(.+)", re.IGNORECASE)
+TITLE_PATTERN = re.compile(r"(.+?)\s*-\s*(.+?)\s* x \s*(.+?)\s*-\s*(.+)", re.IGNORECASE)
 
 class ForumWatcher(commands.Cog):
     def __init__(self, bot):
@@ -62,7 +62,7 @@ class ForumWatcher(commands.Cog):
 
         # === SINGLE-FIELD MESSAGES ===
         single_messages = []
-        if gd_song == "applause":
+        if song == "applause":
             single_messages.append("shlant rn: 🤤")
 
         # === PREFIX SYSTEM ===
