@@ -1,9 +1,11 @@
 import os
 import re
+
 import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
+from playwright.async_api import async_playwright
 
 
 class NewgroundsAudio(commands.Cog):
@@ -73,16 +75,17 @@ class NewgroundsAudio(commands.Cog):
         except Exception:
             pass
 
+    # im just gonna hope i did ts right
     async def fetch_audio_ng_link(self, audio_id: int):
         """Fetch the direct audio.ngfiles.com link from a Newgrounds listen page."""
         url = f"https://www.newgrounds.com/audio/listen/{audio_id}"
-        headers = {"User-Agent": "Mozilla/5.0"}
-
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as resp:
-                if resp.status != 200:
-                    return None
-                html = await resp.text()
+        
+        async with async_playwright() as p:
+            browser = await p.chromium.launch()
+            page = await browser.new_page()
+            await page.goto(url)
+            html = await page.content()
+            await browser.close()
 
         match = re.search(r'https:\/\/audio\.ngfiles\.com\/\d+\/[^\s"\']+\.mp3\?f\d+', html)
         return match.group(0) if match else None
