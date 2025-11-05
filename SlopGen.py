@@ -82,6 +82,7 @@ COGS = [
     "MakeSfhMoreLikeGdmToRagebaitShlant",
     "ping_shlant",
     "Detect_Slop",
+    "ng_link_better",
 ]
 
 # --- Events ---
