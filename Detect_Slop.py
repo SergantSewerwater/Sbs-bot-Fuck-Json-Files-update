@@ -61,10 +61,9 @@ class ForumWatcher(commands.Cog):
             return
 
         # === SINGLE-FIELD MESSAGES ===
-        if song_author == "lady gaga":
-            await thread.send("shlant rn: 🤤")
-        if gd_song == "rok taht body":
-            await thread.send("slop that body better")
+        single_messages = []
+        if gd_song == "applause":
+            single_messages.append("shlant rn: 🤤")
 
         # === PREFIX SYSTEM ===
         prefixes = []
@@ -85,7 +84,7 @@ class ForumWatcher(commands.Cog):
 
         # Song based
         if song == "rock that body":
-            prefixes.append("OMG its RTB hahahahahahahahahahahahah lmao loooooool i love that song it is just the best!")
+            prefixes.append("RTB")
 
         # GD author based
         if gd_author == "uhhh idk any overused gdsong artists":
@@ -99,8 +98,14 @@ class ForumWatcher(commands.Cog):
             prefixes.append("Fast Rap")
 
         # === FINAL MESSAGE ===
-        if prefixes:
-            final_message = "".join(prefixes) + "slop"
+        if single_messages and not prefixes:
+            final_message = " + ".join(single_messages)
+        if prefixes and not single_messages:
+            final_message = f"{" ".join(prefixes)}slop"
+        if prefixes and single_messages:
+            final_message = f"{" + ".join(single_messages)} + {" ".join(prefixes)}slop"
+
+        if final_message:
             await thread.send(final_message)
             print(f"✅ Sent message: {final_message}")
         else:
