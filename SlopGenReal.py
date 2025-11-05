@@ -5,6 +5,7 @@ import os
 import random
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from semitone_calculator import normalize_key, calculate_semitones
 
 # --- Config / Supabase ---
 load_dotenv()
@@ -201,82 +202,32 @@ def semitone_distance(s1, s2):
     return diff
 
 def key_compatible(k1, k2, song1=None):
-    def normalize_mode(mode):
-        if mode == "m":
-            return "Minor"
-        if mode == "Ionian":
-            return "Major"
-        return mode
-
-    s1, mode1, notes1, norm1 = parse_key(k1)
-    s2, mode2, notes2, norm2 = parse_key(k2)
-    if s1 is None or s2 is None:
+    if not k1 or not k2:  # Handle empty keys
         return None, None
 
-    # Collect relationship candidates
-    relationship_candidates = []
+    # Clean up the keys to match semitone_calculator format
+    def clean_key(k):
+        if 'm' in k and 'Minor' not in k:
+            k = k.replace('m', ' Minor')
+        return k
 
-    # Relative keys
-    if norm2 in relative_keys.get(norm1, []):
-        relationship_candidates.append(('relative', semitone_distance(s1, s2)))
+    k1 = clean_key(k1)
+    k2 = clean_key(k2)
 
-    # Parent key logic
-    mode_parent = {
-        "Dorian": "Minor",
-        "Phrygian": "Minor",
-        "Aeolian": "Minor",
-        "Locrian": "Minor",
-        "Minor": "Minor",     # self
-        "Major": "Major",     # self
-        "Lydian": "Major",
-        "Mixolydian": "Major",
-    }
-    def extract_root_and_mode(norm):
-        parts = norm.split()
-        if not parts:
-            return "", ""
-        root = parts[0]
-        mode = parts[1] if len(parts) > 1 else ""
-        return root, normalize_mode(mode)
-    root1, nmode1 = extract_root_and_mode(norm1)
-    root2, nmode2 = extract_root_and_mode(norm2)
-
-    def is_parent_pair(root1, mode1, root2, mode2):
-        if root1 != root2:
-            return False
-        if mode1 in mode_parent and mode2 in mode_parent:
-            if (mode_parent[mode1] == mode2 and mode1 != mode2) or (mode_parent[mode2] == mode1 and mode1 != mode2):
-                return True
-        return False
-
-    if is_parent_pair(root1, nmode1, root2, nmode2):
-        relationship_candidates.append(('parent', semitone_distance(s1, s2)))
-
-    # Custom semitone shift logic
-    max_down, max_up = custom_semitone_diff.get(str(song1), (2, 2))
-    if max_down is None: max_down = 2
-    if max_up is None: max_up = 2
-    step = 0.25
-    shifts = []
-    val = -max_down
-    while val <= max_up:
-        shifts.append(val)
-        val += step
-    for shift in shifts:
-        if notes2 is not None:
-            shifted_notes2 = sorted(((n + shift) % 12 for n in notes2))
-            if shifted_notes2 == notes1:
-                relationship_candidates.append(('custom', shift))
-                break
-
-    # If any relationships found, choose the one with the minimal abs(semitone)
-    if relationship_candidates:
-        # Prefer the relationship with the smallest absolute semitone
-        best = min(relationship_candidates, key=lambda x: abs(x[1]))
-        return True, best[1]
-
-    # If nothing matches, return original custom semitone distance
-    return False, semitone_distance(s1, s2)
+    # Use semitone_calculator's logic
+    result = calculate_semitones(k1, k2)
+    
+    # Extract the semitone difference from the result
+    if "semitone" in result.lower():
+        try:
+            semitone_diff = float(''.join(c for c in result if c in '-.0123456789'))
+            return True, -semitone_diff  # Negative because we want the pitch direction from k2 to k1
+        except ValueError:
+            return False, 0
+    elif "No pitching needed" in result:
+        return True, 0
+    else:
+        return False, 0
 
 def bpm_ok(bpm1, bpm2, song2=None):
     max_down, max_up = custom_bpm_diff.get(str(song2), (7.44, 10.76))
