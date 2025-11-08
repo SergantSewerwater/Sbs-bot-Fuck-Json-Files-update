@@ -342,35 +342,6 @@ def bpm_ok(bpm1, bpm2, song2=None):
             return True
     return False
 
-def generate_pairs(num_pairs=5):
-    pairs = []
-    used = set()
-    attempts = 0
-    while len(pairs) < num_pairs and attempts < 1000:
-        attempts += 1
-        a = random.choice(list1)
-        b = random.choice(list2)
-        if (a[0], b[0]) in banned_combos:
-            continue
-        if not DEBUG_IGNORE_KEY_RULES:
-            key_ok, semitone_diff = key_compatible(a[2], b[2], a[0])
-            if key_ok is None:
-                if DEBUG:
-                    print(f"Skipping key check for {a[0]} or {b[0]} (no key)")
-                key_ok = True
-                semitone_diff = 0
-        else:
-            key_ok, semitone_diff = True, 0
-        bpm_okay = bpm_ok(a[1], b[1], b[0]) if not DEBUG_IGNORE_BPM_RULES else True
-        if (a[0], b[0]) not in used and key_ok and bpm_okay:
-            used.add((a[0], b[0]))
-            _, _, _, norm_a = parse_key(a[2])
-            _, _, _, norm_b = parse_key(b[2])
-            pairs.append((a[0], a[1], norm_a, b[0], b[1], norm_b, semitone_diff))
-        if DEBUG_SHOW_ALL_ATTEMPTS:
-            print(f"Attempt {attempts}: {a[0]} x {b[0]} | Key OK: {key_ok} | BPM OK: {bpm_okay}")
-    return pairs
-
 # --- Supabase banned combos helpers ---
 async def fetch_banned_combos():
     res = supabase.table("banned_combos").select("*").execute()
