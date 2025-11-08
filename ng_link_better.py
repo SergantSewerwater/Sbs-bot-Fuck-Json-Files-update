@@ -49,6 +49,34 @@ if not logger.handlers:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+# ---------------------- ARTIST ALIASES (BIDIRECTIONAL) ----------------------
+# Define groups of aliases that should all map to each other
+ARTIST_GROUPS = [
+
+    ["creo", "creomusic", "hyperdemented"],
+    ["koraii", "tomboyy"],
+    ["kolkian", "devinchin"],
+    ["siximpla", "helvetican"],
+    ["camellia", "cametek"],
+    ["Andersson187", "8bitpiece"],
+    ["1f1n1ty", "ifinity", "onefin"],
+    ["jkream", "jandaman"],
+    ["zodin", "shtriga"],
+    ["robtop", "zhenmuron"],
+    ["kaixo", "kaixomusic"],
+
+]
+
+# Build a bidirectional alias map
+ALIAS_MAP = {}
+for group in ARTIST_GROUPS:
+    for name in group:
+        for alias in group:
+            if name != alias:
+                ALIAS_MAP[name.lower()] = alias.lower()
+
+logger.info(f"Loaded {len(ARTIST_GROUPS)} artist alias groups ({len(ALIAS_MAP)} total aliases).")
+
 
 class NewgroundsAudio(commands.Cog):
     """Cog for fetching and embedding Newgrounds audio files."""
@@ -72,22 +100,20 @@ class NewgroundsAudio(commands.Cog):
     async def ngaudio(self, interaction: discord.Interaction, input_value: str, author: str, title: str):
         """Slash command that fetches and embeds a Newgrounds song."""
         self.points = fetch_points()
-        user_id = str(interaction.user.id) 
+        user_id = str(interaction.user.id)
 
+        # 🎲 Random slop lottery (unchanged)
         if random.randint(1, 1000) == 1:
             self.points[user_id]["points"] += 5000
-            await interaction.followup.send("You just won the slop lottery, you have received 5000 Slop Points")
+            await interaction.followup.send("🎉 You just won the slop lottery! You have received **5000 Slop Points!**")
             save_points(self.points)
             logger.info(f"User {interaction.user} won the slop lottery.")
             return
-        
-        logger.info(f"Command /ngaudio invoked by {interaction.user} with input: {input_value}")
-        await interaction.response.defer(thinking=True)
 
+        await interaction.response.defer(thinking=True)
         logger.info(f"/ngaudio invoked by {interaction.user} | input='{input_value}', author='{author}', title='{title}'")
-        await interaction.response.defer(thinking=True)
 
-        # --- Extract numeric ID from URL or input ---
+        # --- Extract numeric ID ---
         match = re.search(r"(\d+)", input_value)
         if not match:
             logger.warning(f"No valid audio ID found in input: {input_value}")
@@ -95,21 +121,39 @@ class NewgroundsAudio(commands.Cog):
             return
 
         audio_id = int(match.group(1))
-        logger.info(f"Extracted Newgrounds audio ID: {audio_id}")
+        author_clean = author.lower().strip()
+
+        # --- Alias normalization ---
+        if author_clean in ALIAS_MAP:
+            logger.info(f"Author '{author_clean}' matched alias -> '{ALIAS_MAP[author_clean]}'")
+            author_clean = ALIAS_MAP[author_clean]
 
         # --- Try to fetch the CDN link ---
         link = await self.fetch_audio_ng_link(audio_id)
         if not link:
-            logger.error(f"Failed to fetch audio.ng link for ID {audio_id}")
-            await interaction.followup.send(f"❌ Could not find a valid audio.ng link for **{title}** by **{author}**.")
-            return
+            logger.warning(f"Initial fetch failed for {author_clean}, retrying with alias network...")
+            # Try any of the aliases within the same group
+            for group in ARTIST_GROUPS:
+                if author_clean in group:
+                    for alias in group:
+                        logger.info(f"Retrying fetch using alias '{alias}' for author '{author_clean}'")
+                        link = await self.fetch_audio_ng_link(audio_id)
+                        if link:
+                            author_clean = alias
+                            logger.info(f"Alias '{alias}' succeeded for ID {audio_id}")
+                            break
+                if link:
+                    break
 
-        logger.info(f"Found CDN link for {audio_id}: {link}")
+            if not link:
+                await interaction.followup.send(f"❌ Could not find a valid audio.ng link for **{title}** by **{author}**.")
+                logger.error(f"No CDN link found after alias attempts for '{author_clean}'")
+                return
 
         filename = link.split("/")[-1].split("?")[0]
         file_path = os.path.join(self.temp_path, filename)
 
-        # --- Attempt to download the file ---
+        # --- Download file ---
         file_downloaded = False
         try:
             async with aiohttp.ClientSession() as session:
@@ -124,30 +168,28 @@ class NewgroundsAudio(commands.Cog):
         except Exception as e:
             logger.exception(f"Error downloading {link}: {e}")
 
-        # --- Build the embed ---
+        # --- Build and send embed ---
         embed = discord.Embed(
             title=f"🎵 {title}",
-            description=f"By **{author}**\n[Listen on Newgrounds](https://www.newgrounds.com/audio/listen/{audio_id})",
+            description=f"By **{author_clean}**\n[Listen on Newgrounds](https://www.newgrounds.com/audio/listen/{audio_id})",
             color=discord.Color.orange()
         )
         embed.add_field(name="Direct File", value=f"[{filename}]({link})")
         embed.set_footer(text="Fetched from Newgrounds CDN (audio.ngfiles.com)")
         embed.set_thumbnail(url="https://upload.wikimedia.org/wikipedia/commons/0/0a/Newgrounds_Logo.svg")
 
-        # --- Send file if available, otherwise just the link ---
         try:
             if file_downloaded:
-                file = discord.File(file_path, filename=filename)
-                await interaction.followup.send(embed=embed, file=file)
-                logger.info(f"Sent embed + file for {title} ({audio_id}) to Discord.")
+                await interaction.followup.send(embed=embed, file=discord.File(file_path, filename=filename))
+                logger.info(f"Sent embed + file for {title} ({audio_id}).")
             else:
                 await interaction.followup.send(embed=embed)
-                logger.info(f"Sent embed without file for {title} ({audio_id}) due to download failure.")
+                logger.info(f"Sent embed without file for {title} ({audio_id}).")
         except Exception as e:
-            logger.exception(f"Error sending message to Discord: {e}")
+            logger.exception(f"Error sending message: {e}")
             await interaction.followup.send(f"⚠️ Could not send file for **{title}**, but here's the link:\n{link}")
 
-        # --- Cleanup downloaded file ---
+        # --- Cleanup ---
         if file_downloaded:
             try:
                 os.remove(file_path)
@@ -156,9 +198,9 @@ class NewgroundsAudio(commands.Cog):
                 logger.warning(f"Could not delete temporary file {file_path}: {e}")
 
     async def fetch_audio_ng_link(self, audio_id: int):
-        """Fetch the direct audio.ngfiles.com link from a Newgrounds listen page using Playwright."""
+        """Fetch the direct audio.ngfiles.com link from Newgrounds."""
         url = f"https://www.newgrounds.com/audio/listen/{audio_id}"
-        logger.info(f"Fetching Newgrounds page for ID {audio_id}: {url}")
+        logger.info(f"Fetching Newgrounds page for {url}")
 
         try:
             async with async_playwright() as p:
@@ -169,17 +211,13 @@ class NewgroundsAudio(commands.Cog):
                 await browser.close()
 
             match = re.search(r'https:\/\/audio\.ngfiles\.com\/\d+\/[^\s"\']+\.mp3\?f\d+', html)
-            if match:
-                return match.group(0)
-            else:
-                logger.warning(f"No CDN link found in page HTML for ID {audio_id}")
-                return None
+            return match.group(0) if match else None
 
         except Exception as e:
-            logger.exception(f"Playwright error while fetching {url}: {e}")
+            logger.exception(f"Playwright error fetching {url}: {e}")
             return None
 
 
-# --- Required setup for your loader ---
+# --- Required setup for loader ---
 async def setup(bot):
     await bot.add_cog(NewgroundsAudio(bot))
