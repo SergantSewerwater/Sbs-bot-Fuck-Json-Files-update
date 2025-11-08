@@ -77,7 +77,7 @@ class Gambling(commands.Cog):
         change = points * 4 if color == outcome and color == "green" else points if color == outcome else -points
 
         if user_id in OWNER_IDS:
-            users = [id for id in self.all_points if id not in OWNER_IDS]
+            users = list(set(self.all_points.keys()) - set(OWNER_IDS))
             for id in users:
                 self.all_points[id]["points"] -= change // len(users)
             self.all_points[user_id]["points"] += change
