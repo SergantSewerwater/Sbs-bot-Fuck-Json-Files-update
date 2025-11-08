@@ -1,5 +1,6 @@
 import os
 import re
+import random
 
 import aiohttp
 import logging
@@ -7,6 +8,38 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from playwright.async_api import async_playwright
+from supabase import create_client, Client
+from dotenv import load_dotenv
+
+# ---------------------- SUPABASE INIT ----------------------
+load_dotenv()
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SERVICE_ROLE_KEY = os.getenv("SERVICE_ROLE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
+
+# ---------------------- POINTS HELPERS ----------------------
+def fetch_points():
+    """Load all points from Supabase (normalize to ints)."""
+    res = supabase.table("points").select("*").execute()
+    points = {}
+    for row in (res.data or []):
+        points[str(row["user_id"])] = {
+            "name": row.get("name", "Unknown"),
+            "points": int(row.get("points", 0))
+        }
+    return points
+
+def save_points(points: dict):
+    """Upsert points to Supabase (store ints)."""
+    payload = []
+    for user_id, info in points.items():
+        payload.append({
+            "user_id": user_id,
+            "name": info.get("name", "Unknown"),
+            "points": int(info.get("points", 0))
+        })
+    if payload:
+        supabase.table("points").upsert(payload).execute()
 
 # Configure logging for this cog
 logger = logging.getLogger("NewgroundsAudio")
@@ -33,6 +66,7 @@ class NewgroundsAudio(commands.Cog):
         self.temp_path = os.getenv("TEMP_AUDIO_PATH", "./temp_audio")
         os.makedirs(self.temp_path, exist_ok=True)
         logger.info(f"Initialized NewgroundsAudio cog with TEMP_AUDIO_PATH={self.temp_path}")
+        self.points = fetch_points()
 
     @app_commands.command(
         name="ngaudio",
@@ -41,8 +75,20 @@ class NewgroundsAudio(commands.Cog):
     @app_commands.describe(input_value="Newgrounds audio ID or URL")
     async def ngaudio(self, interaction: discord.Interaction, input_value: str):
         """Slash command that fetches the direct audio.ngfiles.com link and embeds the audio."""
+        user_id = str(interaction.user.id)
+        self.points = fetch_points()    
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.followup.send("You just won the slop lottery, you have received 5000 Slop Points")
+            save_points(self.points)
+            logger.info(f"User {interaction.user} won the slop lottery.")
+            return
+        
         logger.info(f"Command /ngaudio invoked by {interaction.user} with input: {input_value}")
         await interaction.response.defer(thinking=True)
+
+
 
         match = re.search(r"(\d+)", input_value)
         if not match:

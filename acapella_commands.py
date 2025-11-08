@@ -4,8 +4,41 @@ from discord.ext import commands
 import os
 import io
 import time
+import random
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from supabase import create_client, Client
+from dotenv import load_dotenv
+
+# ---------------------- SUPABASE INIT ----------------------
+load_dotenv()
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SERVICE_ROLE_KEY = os.getenv("SERVICE_ROLE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
+
+# ---------------------- POINTS HELPERS ----------------------
+def fetch_points():
+    """Load all points from Supabase (normalize to ints)."""
+    res = supabase.table("points").select("*").execute()
+    points = {}
+    for row in (res.data or []):
+        points[str(row["user_id"])] = {
+            "name": row.get("name", "Unknown"),
+            "points": int(row.get("points", 0))
+        }
+    return points
+
+def save_points(points: dict):
+    """Upsert points to Supabase (store ints)."""
+    payload = []
+    for user_id, info in points.items():
+        payload.append({
+            "user_id": user_id,
+            "name": info.get("name", "Unknown"),
+            "points": int(info.get("points", 0))
+        })
+    if payload:
+        supabase.table("points").upsert(payload).execute()
 
 # ===== CONFIG =====
 ACAPELLA_DIR = r"C:\Users\matsj\Desktop\SBSbot\acapellas"  # Local folder
@@ -22,6 +55,7 @@ class Acapella(commands.Cog):
         self.cache_timestamp = 0
         self.drive_service = self.setup_drive_service()
         self.bot.loop.create_task(self.preload_cache())
+        self.points = fetch_points()
 
     async def preload_cache(self):
         await self.bot.wait_until_ready()
@@ -87,6 +121,15 @@ class Acapella(commands.Cog):
     @app_commands.describe(song_name="Name of the song to find")
     @app_commands.autocomplete(song_name=autocomplete_songs)
     async def acapella_command(self, interaction: discord.Interaction, song_name: str):
+        self.points = fetch_points()
+        user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.followup.send("You just won the slop lottery, you have received 5000 Slop Points")
+            save_points(self.points)
+            return
+    
         # Defer the interaction to avoid 10062 if fetching takes time
         await interaction.response.defer(ephemeral=False)
 

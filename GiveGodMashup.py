@@ -3,11 +3,44 @@ from discord import app_commands
 from discord.ext import commands
 import random
 import io
+import os
 import time
 import asyncio
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+from supabase import create_client, Client
+from dotenv import load_dotenv
+
+# ---------------------- SUPABASE INIT ----------------------
+load_dotenv()
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SERVICE_ROLE_KEY = os.getenv("SERVICE_ROLE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
+
+# ---------------------- POINTS HELPERS ----------------------
+def fetch_points():
+    """Load all points from Supabase (normalize to ints)."""
+    res = supabase.table("points").select("*").execute()
+    points = {}
+    for row in (res.data or []):
+        points[str(row["user_id"])] = {
+            "name": row.get("name", "Unknown"),
+            "points": int(row.get("points", 0))
+        }
+    return points
+
+def save_points(points: dict):
+    """Upsert points to Supabase (store ints)."""
+    payload = []
+    for user_id, info in points.items():
+        payload.append({
+            "user_id": user_id,
+            "name": info.get("name", "Unknown"),
+            "points": int(info.get("points", 0))
+        })
+    if payload:
+        supabase.table("points").upsert(payload).execute()
 
 # ===== CONFIG =====
 CREDENTIALS_FILE = "credentials.json"
@@ -24,6 +57,7 @@ class GiveGodMashup(commands.Cog):
         self.cached_files = []
         self.cache_timestamp = 0
         self.bot.loop.create_task(self.preload_cache())
+        self.points = fetch_points()
 
     async def preload_cache(self):
         await self.bot.wait_until_ready()
@@ -71,7 +105,16 @@ class GiveGodMashup(commands.Cog):
         description="Get a totally great and bangin' mashup"
     )
     async def give_good_mashup(self, interaction: discord.Interaction):
-        await interaction.response.defer()
+        self.points = fetch_points()
+        user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.followup.send("You just won the slop lottery, you have received 5000 Slop Points")
+            save_points(self.points)
+            return
+        
+        await interaction.response.defer(thinking=True)
 
         files = self.get_drive_files()
         if not files:

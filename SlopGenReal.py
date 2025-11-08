@@ -13,6 +13,30 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SERVICE_ROLE_KEY = os.getenv("SERVICE_ROLE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
 
+# ---------------------- POINTS HELPERS ----------------------
+def fetch_points():
+    """Load all points from Supabase (normalize to ints)."""
+    res = supabase.table("points").select("*").execute()
+    points = {}
+    for row in (res.data or []):
+        points[str(row["user_id"])] = {
+            "name": row.get("name", "Unknown"),
+            "points": int(row.get("points", 0))
+        }
+    return points
+
+def save_points(points: dict):
+    """Upsert points to Supabase (store ints)."""
+    payload = []
+    for user_id, info in points.items():
+        payload.append({
+            "user_id": user_id,
+            "name": info.get("name", "Unknown"),
+            "points": int(info.get("points", 0))
+        })
+    if payload:
+        supabase.table("points").upsert(payload).execute()
+
 # --- Debug flags ---
 DEBUG = False
 DEBUG_IGNORE_KEY_RULES = False
@@ -74,7 +98,8 @@ list1 = [
     ("Waterflame - Ricochet Love", 165, "A#m"), 
     ("Waterflame - Time Machine", 143, "F# Dorian+0.5"), 
     ("Creo - Flow", 64, "C Phrygian"),
-    ("Xtrullor - Disordered Worlds", 133, "C#m")
+    ("Xtrullor - Disordered Worlds", 133, "C#m"),
+    ("Creo - Never Make It", 114, "G#m")
 ]
 
 list2 = [
@@ -96,6 +121,7 @@ list2 = [
     ("One Direction - What Makes You Beautiful", 125, "E"),
     ("Eminem - Beautiful", 66, "F Minor"),
     ("femtanyl, ISSBROKIE - NASTYWERKKKK!", 133, "")
+    ("Imagine Dragons - Bones", 114, "A#m")
 ]
 
 BANNED_COMBOS_FILE = "banned_combos.json"
@@ -370,6 +396,7 @@ def has_jammer_role(interaction: discord.Interaction) -> bool:
 class SlopGenReal(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.points = fetch_points()
 
     async def generate_pairs(self, num_pairs=5):
         banned_combos = await fetch_banned_combos()
@@ -400,6 +427,15 @@ class SlopGenReal(commands.Cog):
 
     @app_commands.command(name="gen", description="Generate a starboardslop mashup idea")
     async def gen_slash(self, interaction: discord.Interaction):
+        self.points = fetch_points()
+        user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points")
+            save_points(self.points)
+            return
+
         pairs = await self.generate_pairs(1)
         lines = []
         for a, bpm_a, key_a, b, bpm_b, key_b, semitone_diff in pairs:

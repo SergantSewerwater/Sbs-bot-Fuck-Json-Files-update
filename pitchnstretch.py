@@ -7,7 +7,41 @@ import subprocess
 from pathlib import Path
 import asyncio
 import os
+import random
 from dotenv import load_dotenv
+from supabase import create_client, Client
+
+# ---------------------- SUPABASE INIT ----------------------
+load_dotenv()
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SERVICE_ROLE_KEY = os.getenv("SERVICE_ROLE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
+
+OWNER_IDS = ["1279417773013078098", "1117143387695497278", "703364595321929730"]
+
+# ---------------------- POINTS HELPERS ----------------------
+def fetch_points():
+    """Load all points from Supabase (normalize to ints)."""
+    res = supabase.table("points").select("*").execute()
+    points = {}
+    for row in (res.data or []):
+        points[str(row["user_id"])] = {
+            "name": row.get("name", "Unknown"),
+            "points": int(row.get("points", 0))
+        }
+    return points
+
+def save_points(points: dict):
+    """Upsert points to Supabase (store ints)."""
+    payload = []
+    for user_id, info in points.items():
+        payload.append({
+            "user_id": user_id,
+            "name": info.get("name", "Unknown"),
+            "points": int(info.get("points", 0))
+        })
+    if payload:
+        supabase.table("points").upsert(payload).execute()
 
 # Load .env file
 load_dotenv()
@@ -39,6 +73,7 @@ class PitchStretch(commands.Cog):
         self.bot = bot
         # Start cleanup loop
         self.bot.loop.create_task(self.cleanup_temp_folder())
+        self.points = fetch_points()
 
     # -------- Utility: stream download --------
     async def download_file(self, url: str, dest: Path):
@@ -55,6 +90,15 @@ class PitchStretch(commands.Cog):
     @app_commands.command(name="pitch", description="Pitch shift an audio file by -12 to +12 semitones")
     @app_commands.describe(semitones="Number of semitones to shift (-12 to +12)", file="Attach an audio file")
     async def pitch(self, interaction: discord.Interaction, semitones: float, file: discord.Attachment):
+        self.points = fetch_points()
+        user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points")
+            save_points(self.points)
+            return
+
         if not (-12 <= semitones <= 12):
             await interaction.response.send_message("❌ Semitones must be between -12 and 12.", ephemeral=True)
             return
@@ -94,6 +138,15 @@ class PitchStretch(commands.Cog):
     @app_commands.command(name="stretch", description="Time-stretch an audio file to a target BPM")
     @app_commands.describe(original_bpm="Original BPM of the track", target_bpm="Target BPM", file="Attach an audio file")
     async def stretch(self, interaction: discord.Interaction, original_bpm: float, target_bpm: float, file: discord.Attachment):
+        self.points = fetch_points()
+        user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points")
+            save_points(self.points)
+            return
+
         if original_bpm <= 0 or target_bpm <= 0:
             await interaction.response.send_message("❌ BPM must be greater than 0.", ephemeral=True)
             return
