@@ -38,6 +38,7 @@ class NewgroundsAudio(commands.Cog):
         name="ngaudio",
         description="Fetch and embed a Newgrounds song (from ID or URL)."
     )
+    @app_commands.describe(input_value="Newgrounds audio ID or URL")
     async def ngaudio(self, interaction: discord.Interaction, input_value: str):
         """Slash command that fetches the direct audio.ngfiles.com link and embeds the audio."""
         logger.info(f"Command /ngaudio invoked by {interaction.user} with input: {input_value}")
