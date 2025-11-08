@@ -178,7 +178,7 @@ class FindKey(commands.Cog):
         title = song_info.get("title", chosen)
 
         # Use the requested formatting: (song author) - (song name)
-        header = f"🎵 **{author}) - ({title}**"
+        header = f"🎵 **{author} - {title}**"
         if reason:
             header += f"\n_{reason}_"
 

@@ -75,7 +75,7 @@ def calculate_semitones(key_1: str, key_2: str) -> str:
     diff_str = f"+{diff}" if diff > 0 else str(diff)
 
     if abs(diff) == 6:
-        return f"You need to pitch the {key_1_norm} ±6 semitones to get to {key_2_norm}."
+        return f"You need to pitch {key_1_norm} ±6 semitones to get to {key_2_norm}."
     elif abs(diff) == 1:
         return f"You need to pitch {key_1_norm} {diff_str} semitone to get to {key_2_norm}."
     else:
