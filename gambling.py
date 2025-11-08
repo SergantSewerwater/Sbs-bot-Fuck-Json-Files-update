@@ -50,16 +50,11 @@ class Gambling(commands.Cog):
     @app_commands.describe(points="How many Slop Points to gamble", color="Choose red, black, or green")
     async def gamble(self, interaction: discord.Interaction, points: int, color: str):
         self.all_points = fetch_points()
-        points2 = points // 3
         if points < 0:
             await interaction.response.send_message("You cannot gamble a negative amount of Slop Points.")
             return
 
         user_id = str(interaction.user.id)
-
-        if user_id in OWNER_IDS:
-            await interaction.response.send_message(f"Ur in the 1% dont gamble away your riches bro")
-            return
 
         if user_id not in self.all_points or self.all_points[user_id]["points"] <= 0:
             await interaction.response.send_message("Broke bitch.")
@@ -79,22 +74,21 @@ class Gambling(commands.Cog):
 
         outcome = random.choices(['red', 'black', 'green'], weights=[49.5, 49.5, 1], k=1)[0]
 
-        if outcome == color:
-            winnings = points * 4 if color == 'green' else points
+        change = points * 4 if color == outcome and color == "green" else points if color == outcome else -points
 
-            for oid in OWNER_IDS:
-                self.all_points[oid]["points"] -= points2
-            self.all_points[user_id]["points"] += winnings
-            await interaction.response.send_message(
-                f"You won! You now have {self.all_points[user_id]['points']} Slop Points."
-            )
+        if user_id in OWNER_IDS:
+            users = [id for id in self.all_points if id not in OWNER_IDS]
+            for id in users:
+                self.all_points[id]["points"] -= change // len(users)
+            self.all_points[user_id]["points"] += change
         else:
             for oid in OWNER_IDS:
-                self.all_points[oid]["points"] += points2
-            self.all_points[user_id]["points"] -= points
-            await interaction.response.send_message(
-                f"You lost! You now have {self.all_points[user_id]['points']} Slop Points."
-            )
+                self.all_points[oid]["points"] -= change // 3
+            self.all_points[user_id]["points"] += change
+        result = "won" if change > 0 else "lost"
+        await interaction.response.send_message(
+            f"You {result}! You now have {self.all_points[user_id]['points']} Slop Points."
+        )
 
         save_points(self.all_points)
 
