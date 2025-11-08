@@ -13,30 +13,6 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SERVICE_ROLE_KEY = os.getenv("SERVICE_ROLE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-# ---------------------- POINTS HELPERS ----------------------
-def fetch_points():
-    """Load all points from Supabase (normalize to ints)."""
-    res = supabase.table("points").select("*").execute()
-    points = {}
-    for row in (res.data or []):
-        points[str(row["user_id"])] = {
-            "name": row.get("name", "Unknown"),
-            "points": int(row.get("points", 0))
-        }
-    return points
-
-def save_points(points: dict):
-    """Upsert points to Supabase (store ints)."""
-    payload = []
-    for user_id, info in points.items():
-        payload.append({
-            "user_id": user_id,
-            "name": info.get("name", "Unknown"),
-            "points": int(info.get("points", 0))
-        })
-    if payload:
-        supabase.table("points").upsert(payload).execute()
-
 # --- Debug flags ---
 DEBUG = False
 DEBUG_IGNORE_KEY_RULES = False
@@ -98,8 +74,7 @@ list1 = [
     ("Waterflame - Ricochet Love", 165, "A#m"), 
     ("Waterflame - Time Machine", 143, "F# Dorian+0.5"), 
     ("Creo - Flow", 64, "C Phrygian"),
-    ("Xtrullor - Disordered Worlds", 133, "C#m"),
-    ("Creo - Never Make It", 114, "G#m")
+    ("Xtrullor - Disordered Worlds", 133, "C#m")
 ]
 
 list2 = [
@@ -121,7 +96,6 @@ list2 = [
     ("One Direction - What Makes You Beautiful", 125, "E"),
     ("Eminem - Beautiful", 66, "F Minor"),
     ("femtanyl, ISSBROKIE - NASTYWERKKKK!", 133, "")
-    ("Imagine Dragons - Bones", 114, "A#m")
 ]
 
 BANNED_COMBOS_FILE = "banned_combos.json"
@@ -342,6 +316,35 @@ def bpm_ok(bpm1, bpm2, song2=None):
             return True
     return False
 
+def generate_pairs(num_pairs=5):
+    pairs = []
+    used = set()
+    attempts = 0
+    while len(pairs) < num_pairs and attempts < 1000:
+        attempts += 1
+        a = random.choice(list1)
+        b = random.choice(list2)
+        if (a[0], b[0]) in banned_combos:
+            continue
+        if not DEBUG_IGNORE_KEY_RULES:
+            key_ok, semitone_diff = key_compatible(a[2], b[2], a[0])
+            if key_ok is None:
+                if DEBUG:
+                    print(f"Skipping key check for {a[0]} or {b[0]} (no key)")
+                key_ok = True
+                semitone_diff = 0
+        else:
+            key_ok, semitone_diff = True, 0
+        bpm_okay = bpm_ok(a[1], b[1], b[0]) if not DEBUG_IGNORE_BPM_RULES else True
+        if (a[0], b[0]) not in used and key_ok and bpm_okay:
+            used.add((a[0], b[0]))
+            _, _, _, norm_a = parse_key(a[2])
+            _, _, _, norm_b = parse_key(b[2])
+            pairs.append((a[0], a[1], norm_a, b[0], b[1], norm_b, semitone_diff))
+        if DEBUG_SHOW_ALL_ATTEMPTS:
+            print(f"Attempt {attempts}: {a[0]} x {b[0]} | Key OK: {key_ok} | BPM OK: {bpm_okay}")
+    return pairs
+
 # --- Supabase banned combos helpers ---
 async def fetch_banned_combos():
     res = supabase.table("banned_combos").select("*").execute()
@@ -367,7 +370,6 @@ def has_jammer_role(interaction: discord.Interaction) -> bool:
 class SlopGenReal(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.points = fetch_points()
 
     async def generate_pairs(self, num_pairs=5):
         banned_combos = await fetch_banned_combos()
@@ -398,15 +400,6 @@ class SlopGenReal(commands.Cog):
 
     @app_commands.command(name="gen", description="Generate a starboardslop mashup idea")
     async def gen_slash(self, interaction: discord.Interaction):
-        self.points = fetch_points()
-        user_id = str(interaction.user.id)
-
-        if random.randint(1, 1000) == 1:
-            self.points[user_id]["points"] += 5000
-            await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points")
-            save_points(self.points)
-            return
-
         pairs = await self.generate_pairs(1)
         lines = []
         for a, bpm_a, key_a, b, bpm_b, key_b, semitone_diff in pairs:
