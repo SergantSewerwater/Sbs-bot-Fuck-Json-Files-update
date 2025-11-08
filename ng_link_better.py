@@ -41,21 +41,14 @@ def save_points(points: dict):
     if payload:
         supabase.table("points").upsert(payload).execute()
 
-# Configure logging for this cog
+# --- Logging Configuration ---
 logger = logging.getLogger("NewgroundsAudio")
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
-formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
-# Configure logging for this cog
-logger = logging.getLogger("NewgroundsAudio")
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
-formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+if not logger.handlers:
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 
 class NewgroundsAudio(commands.Cog):
@@ -72,9 +65,13 @@ class NewgroundsAudio(commands.Cog):
         name="ngaudio",
         description="Fetch and embed a Newgrounds song (from ID or URL)."
     )
-    @app_commands.describe(input_value="Newgrounds audio ID or URL")
-    async def ngaudio(self, interaction: discord.Interaction, input_value: str):
-        """Slash command that fetches the direct audio.ngfiles.com link and embeds the audio."""
+    @app_commands.describe(
+        input_value="Newgrounds audio ID or URL (e.g. 505813 or https://www.newgrounds.com/audio/listen/505813)",
+        author="Song author (so it won't break if it changes on the site)",
+        title="Song title (so it won't break if it changes on the site)"
+    )
+    async def ngaudio(self, interaction: discord.Interaction, input_value: str, author: str, title: str):
+        """Slash command that fetches and embeds a Newgrounds song."""
         user_id = str(interaction.user.id)
         self.points = fetch_points()    
 
@@ -87,85 +84,102 @@ class NewgroundsAudio(commands.Cog):
         
         logger.info(f"Command /ngaudio invoked by {interaction.user} with input: {input_value}")
         await interaction.response.defer(thinking=True)
+        logger.info(f"/ngaudio invoked by {interaction.user} | input='{input_value}', author='{author}', title='{title}'")
+        await interaction.response.defer(thinking=True)
 
-
-
+        # --- Extract numeric ID from URL or input ---
         match = re.search(r"(\d+)", input_value)
         if not match:
-            logger.warning(f"No audio ID found in input: {input_value}")
+            logger.warning(f"No valid audio ID found in input: {input_value}")
             await interaction.followup.send("❌ Could not find a valid audio ID in your input.")
             return
 
         audio_id = int(match.group(1))
-        logger.info(f"Extracted audio ID: {audio_id}")
+        logger.info(f"Extracted Newgrounds audio ID: {audio_id}")
 
+        # --- Try to fetch the CDN link ---
         link = await self.fetch_audio_ng_link(audio_id)
         if not link:
-            logger.error(f"Could not fetch audio.ng link for ID {audio_id}")
-            await interaction.followup.send("❌ Could not find an audio.ng link. The track may be private or unavailable.")
+            logger.error(f"Failed to fetch audio.ng link for ID {audio_id}")
+            await interaction.followup.send(f"❌ Could not find a valid audio.ng link for **{title}** by **{author}**.")
             return
 
-        logger.info(f"Fetched CDN link: {link}")
+        logger.info(f"Found CDN link for {audio_id}: {link}")
 
         filename = link.split("/")[-1].split("?")[0]
         file_path = os.path.join(self.temp_path, filename)
 
+        # --- Attempt to download the file ---
+        file_downloaded = False
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(link) as resp:
-                    if resp.status != 200:
-                        logger.error(f"Failed to download {link} (HTTP {resp.status})")
-                        await interaction.followup.send(f"❌ Failed to download file (HTTP {resp.status}).")
-                        return
-                    with open(file_path, "wb") as f:
-                        f.write(await resp.read())
-            logger.info(f"Downloaded file to {file_path}")
+                    if resp.status == 200:
+                        with open(file_path, "wb") as f:
+                            f.write(await resp.read())
+                        file_downloaded = True
+                        logger.info(f"Downloaded file to {file_path}")
+                    else:
+                        logger.warning(f"Failed to download file (HTTP {resp.status}) from {link}")
         except Exception as e:
-            logger.exception(f"Error downloading file {link}: {e}")
-            await interaction.followup.send("❌ Error downloading the audio file.")
-            return
+            logger.exception(f"Error downloading {link}: {e}")
 
-        # Create embed
+        # --- Build the embed ---
         embed = discord.Embed(
-            title="🎵 Newgrounds Audio",
-            description=f"[Listen on Newgrounds](https://www.newgrounds.com/audio/listen/{audio_id})",
+            title=f"🎵 {title}",
+            description=f"By **{author}**\n[Listen on Newgrounds](https://www.newgrounds.com/audio/listen/{audio_id})",
             color=discord.Color.orange()
         )
         embed.add_field(name="Direct File", value=f"[{filename}]({link})")
         embed.set_footer(text="Fetched from Newgrounds CDN (audio.ngfiles.com)")
-        embed.set_author(name=f"ID: {audio_id}")
         embed.set_thumbnail(url="https://upload.wikimedia.org/wikipedia/commons/0/0a/Newgrounds_Logo.svg")
 
+        # --- Send file if available, otherwise just the link ---
         try:
-            file = discord.File(file_path, filename=filename)
-            await interaction.followup.send(embed=embed, file=file)
-            logger.info(f"Sent embed and file {filename} to Discord")
+            if file_downloaded:
+                file = discord.File(file_path, filename=filename)
+                await interaction.followup.send(embed=embed, file=file)
+                logger.info(f"Sent embed + file for {title} ({audio_id}) to Discord.")
+            else:
+                await interaction.followup.send(embed=embed)
+                logger.info(f"Sent embed without file for {title} ({audio_id}) due to download failure.")
         except Exception as e:
-            logger.exception(f"Error sending file to Discord: {e}")
-            await interaction.followup.send("❌ Error sending the audio file to Discord.")
+            logger.exception(f"Error sending message to Discord: {e}")
+            await interaction.followup.send(f"⚠️ Could not send file for **{title}**, but here's the link:\n{link}")
 
-        # Cleanup
-        try:
-            os.remove(file_path)
-            logger.info(f"Deleted temporary file {file_path}")
-        except Exception:
-            pass
+        # --- Cleanup downloaded file ---
+        if file_downloaded:
+            try:
+                os.remove(file_path)
+                logger.info(f"Deleted temporary file {file_path}")
+            except Exception as e:
+                logger.warning(f"Could not delete temporary file {file_path}: {e}")
 
-    # im just gonna hope i did ts right
     async def fetch_audio_ng_link(self, audio_id: int):
-        """Fetch the direct audio.ngfiles.com link from a Newgrounds listen page."""
+        """Fetch the direct audio.ngfiles.com link from a Newgrounds listen page using Playwright."""
         url = f"https://www.newgrounds.com/audio/listen/{audio_id}"
-        
-        async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            page = await browser.new_page()
-            await page.goto(url)
-            html = await page.content()
-            await browser.close()
+        logger.info(f"Fetching Newgrounds page for ID {audio_id}: {url}")
 
-        match = re.search(r'https:\/\/audio\.ngfiles\.com\/\d+\/[^\s"\']+\.mp3\?f\d+', html)
-        return match.group(0) if match else None
+        try:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                page = await browser.new_page()
+                await page.goto(url, timeout=15000)
+                html = await page.content()
+                await browser.close()
 
-# Async setup function for modern loader
+            match = re.search(r'https:\/\/audio\.ngfiles\.com\/\d+\/[^\s"\']+\.mp3\?f\d+', html)
+            if match:
+                return match.group(0)
+            else:
+                logger.warning(f"No CDN link found in page HTML for ID {audio_id}")
+                return None
+
+        except Exception as e:
+            logger.exception(f"Playwright error while fetching {url}: {e}")
+            return None
+
+
+# --- Required setup for your loader ---
 async def setup(bot):
     await bot.add_cog(NewgroundsAudio(bot))
