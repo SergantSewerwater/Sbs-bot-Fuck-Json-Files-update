@@ -4,6 +4,7 @@ from discord import app_commands
 from discord.ext import commands
 import os
 import re
+import random
 from difflib import get_close_matches
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -22,6 +23,29 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 GDSONG_TABLE = "gdsongdata"
 NONGDSONG_TABLE = "nongdsongdata"
 
+# ---------------------- POINTS HELPERS ----------------------
+def fetch_points():
+    """Load all points from Supabase (normalize to ints)."""
+    res = supabase.table("points").select("*").execute()
+    points = {}
+    for row in (res.data or []):
+        points[str(row["user_id"])] = {
+            "name": row.get("name", "Unknown"),
+            "points": int(row.get("points", 0))
+        }
+    return points
+
+def save_points(points: dict):
+    """Upsert points to Supabase (store ints)."""
+    payload = []
+    for user_id, info in points.items():
+        payload.append({
+            "user_id": user_id,
+            "name": info.get("name", "Unknown"),
+            "points": int(info.get("points", 0))
+        })
+    if payload:
+        supabase.table("points").upsert(payload).execute()
 
 # --- Loaders ---
 def load_songdata():
@@ -64,6 +88,7 @@ songdata = load_songdata()
 class FindKey(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.points = fetch_points()
 
     # ---------- Helpers ----------
     @staticmethod
@@ -152,6 +177,15 @@ class FindKey(commands.Cog):
     @app_commands.describe(song="Enter 'Artist - Song' or just the song name")
     @app_commands.autocomplete(song=song_autocomplete)
     async def find_key(self, interaction: discord.Interaction, song: str):
+        self.points = fetch_points()
+        user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points")
+            save_points(self.points)
+            return
+        
         names = list(songdata.keys())
         chosen, reason = self._autocorrect_title(song, names)
 

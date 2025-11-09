@@ -50,11 +50,17 @@ class Gambling(commands.Cog):
     @app_commands.describe(points="How many Slop Points to gamble", color="Choose red, black, or green")
     async def gamble(self, interaction: discord.Interaction, points: int, color: str):
         self.all_points = fetch_points()
+        user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.all_points[user_id]["points"] += 5000
+            await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points")
+            save_points(self.all_points)
+            return
+        
         if points < 0:
             await interaction.response.send_message("You cannot gamble a negative amount of Slop Points.")
             return
-
-        user_id = str(interaction.user.id)
 
         if user_id not in self.all_points or self.all_points[user_id]["points"] <= 0:
             await interaction.response.send_message("Broke bitch.")

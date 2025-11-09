@@ -91,6 +91,15 @@ class Imitate(commands.Cog):
     @app_commands.describe(keyword="Pick who to imitate")
     @app_commands.autocomplete(keyword=keyword_autocomplete)
     async def imitate(self, interaction: discord.Interaction, keyword: str):
+        self.points = fetch_points()
+        user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points!")
+            save_points(self.points)
+            return
+
         if keyword.lower() not in self.imitations_lower:
             await interaction.response.send_message("❌ That person isn't cool enough to be made fun of", ephemeral=True)
             return
@@ -108,6 +117,14 @@ class Imitate(commands.Cog):
     @app_commands.command(name="imitate_game", description="Start an imitation game")
     async def imitate_game(self, interaction: discord.Interaction):
         self.points = fetch_points()
+        user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points!")
+            save_points(self.points)
+            return
+
         if self.active_game:
             await interaction.response.send_message("A game is already active!", ephemeral=True)
             return
@@ -184,6 +201,13 @@ class Imitate(commands.Cog):
     async def imitate_points(self, interaction: discord.Interaction):
         self.points = fetch_points()
         user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points!")
+            save_points(self.points)
+            return
+
         data = self.points.get(user_id, {"name": str(interaction.user), "points": 0})
         await interaction.response.send_message(f"You have {data['points']} points.")
 
@@ -191,6 +215,14 @@ class Imitate(commands.Cog):
     @app_commands.command(name="imitate_leaderboard", description="Show the Slop Points leaderboard")
     async def imitate_leaderboard(self, interaction: discord.Interaction):
         self.points = fetch_points()
+        user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points!")
+            save_points(self.points)
+            return
+        
         if not self.points:
             await interaction.response.send_message("No one has any Slop Points yet!", ephemeral=True)
             return
