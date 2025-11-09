@@ -105,7 +105,7 @@ class NewgroundsAudio(commands.Cog):
         # 🎲 Random slop lottery (unchanged)
         if random.randint(1, 1000) == 1:
             self.points[user_id]["points"] += 5000
-            await interaction.followup.send("🎉 You just won the slop lottery! You have received **5000 Slop Points!**")
+            await interaction.followup.send("You just won the slop lottery, you have received 5000 Slop Points")
             save_points(self.points)
             logger.info(f"User {interaction.user} won the slop lottery.")
             return

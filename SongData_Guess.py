@@ -63,6 +63,7 @@ class SongDataGuess(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.active_games = {}  # channel_id -> dict
+        self.points = fetch_points()
 
     async def _run_guess_game(self, interaction: discord.Interaction, table_name: str, label: str):
         songdata = fetch_songdata(table_name)
@@ -217,11 +218,29 @@ class SongDataGuess(commands.Cog):
     # ---------------- app commands (slash) ----------------
     @app_commands.command(name="guess_gdsong_key", description="Guess the key and BPM of a random GD song")
     async def guess_gdsong_key(self, interaction: discord.Interaction):
+        self.points = fetch_points()
+        user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points")
+            save_points(self.points)
+            return
+        
         # fetch points is internal to the cog methods if needed
         await self._run_guess_game(interaction, "gdsongdata", "GD songs")
 
     @app_commands.command(name="guess_non_gdsong_key", description="Guess the key and BPM of a random non-GD song")
     async def guess_non_gdsong_key(self, interaction: discord.Interaction):
+        self.points = fetch_points()
+        user_id = str(interaction.user.id)
+
+        if random.randint(1, 1000) == 1:
+            self.points[user_id]["points"] += 5000
+            await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points")
+            save_points(self.points)
+            return
+        
         await self._run_guess_game(interaction, "nongdsongdata", "Non-GD songs")
 
 # ---------------------- SETUP ----------------------
