@@ -55,8 +55,13 @@ class PingShlant(commands.Cog):
             await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points")
             save_points(self.points)
             return
+        
+        if random.randint(1, 5) == 1:
+            await interaction.response.send_message(f"<@1435850784410701835>")
+            return
 
         await interaction.response.send_message(f"<@530140140211798016>")
+        return
 
 # cog loader
 async def setup(bot: commands.Bot):
