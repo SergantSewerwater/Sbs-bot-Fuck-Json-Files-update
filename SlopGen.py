@@ -83,6 +83,7 @@ COGS = [
     "ping_shlant",
     "Detect_Slop",
     "ng_link_better",
+    "Alltendance",
 ]
 
 # --- Events ---
@@ -131,3 +132,4 @@ async def on_message(message):
 
 # --- Run bot ---
 bot.run(token)
+
