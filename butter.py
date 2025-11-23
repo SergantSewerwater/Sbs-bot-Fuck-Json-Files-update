@@ -8,7 +8,7 @@ class Butter(commands.Cog):
 
     @commands.Cog.listener
     async def on_message(self, message: discord.Message):
-        if message.author.id == 932981222622249001:
+        if message.author.id in [1339158762128146463, 932981222622249001, 1117143387695497278]:
             await message.add_reaction("🧈")
 
 async def setup(bot):
