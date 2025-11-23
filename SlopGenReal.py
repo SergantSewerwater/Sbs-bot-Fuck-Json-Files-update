@@ -74,7 +74,9 @@ list1 = [
     ("Waterflame - Ricochet Love", 165, "A#m"), 
     ("Waterflame - Time Machine", 143, "F# Dorian+0.5"), 
     ("Creo - Flow", 64, "C Phrygian"),
-    ("Xtrullor - Disordered Worlds", 133, "C#m")
+    ("Xtrullor - Disordered Worlds", 133, "C#m"),
+    ("Creo - Never Make It", 114, "G#m"),
+    ("Panda Eyes & Teminite - Highscore", 110, "A# Dorian"),
 ]
 
 list2 = [
@@ -95,7 +97,9 @@ list2 = [
     ("Miley Cyrus - Party In The USA", 96, "F#"),
     ("One Direction - What Makes You Beautiful", 125, "E"),
     ("Eminem - Beautiful", 66, "F Minor"),
-    ("femtanyl, ISSBROKIE - NASTYWERKKKK!", 133, "")
+    ("femtanyl, ISSBROKIE - NASTYWERKKKK!", 133, ""),
+    ("Imagine Dragons - Bones", 114, "A#m"),
+    ("2hollis - Poster Boy", 111, "F#m"),
 ]
 
 BANNED_COMBOS_FILE = "banned_combos.json"
@@ -149,6 +153,8 @@ custom_semitone_diff = {
     "Waterflame - Ricochet Love": (3, 3),
     "Waterflame - Time Machine": (2.5, 3.5),
     "Creo - Flow": (2, 2),
+    "Creo - Never Make It": (3, 3),
+    "Panda Eyes & Teminite - Highscore": (4, 3),
 }
 
 custom_bpm_diff = {
@@ -169,7 +175,8 @@ custom_bpm_diff = {
     "Miley Cyrus - Party In The USA": (14, 4),
     "One Direction - What Makes You Beautiful": (10, 15),
     "Eminem - Beautiful": (7, 10.44),
-    
+    "Imagine Dragons - Bones": (7, 10),
+    "2hollis - Poster Boy": (7, 10),
 }
 
 def parse_key(key_str):
