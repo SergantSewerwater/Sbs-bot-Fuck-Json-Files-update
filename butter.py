@@ -5,7 +5,7 @@ class Butter(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         # use a set for fast membership checks
-        self._butter_users = {1339158762128146463, 932981222622249001, 1117143387695497278}
+        self._butter_users = {1339158762128146463, 932981222622249001}
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
