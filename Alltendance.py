@@ -1,146 +1,142 @@
 import discord
 from discord.ext import commands, tasks
+from discord import app_commands
 import json
 import os
-import re
-from dotenv import load_dotenv
 from datetime import datetime, timezone
-from supabase import create_client
+from dotenv import load_dotenv
 
-# --- Load environment ---
+# Load env
 load_dotenv()
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SERVICE_ROLE_KEY = os.getenv("SERVICE_ROLE_KEY")
-TOKEN = os.getenv("DISCORD_TOKEN")
-
-# --- Constants ---
+AUTHORIZED_USER_ID = 1279417773013078098  # Sergeant
 FORUM_CHANNEL_ID = 1352870773588623404
-TARGET_USER_ID = 1279417773013078098
-PROCESSED_FILE = "processed_threads.json"
+PROCESSED_JSON = "processed_threads.json"
 
-# --- Supabase client ---
-supabase = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
-
-# --- Helpers ---
-def load_processed_threads():
-    if not os.path.exists(PROCESSED_FILE):
-        with open(PROCESSED_FILE, "w", encoding="utf-8") as f:
-            json.dump([], f)
-        return set()
-    with open(PROCESSED_FILE, "r", encoding="utf-8") as f:
-        return set(json.load(f))
-
-def save_processed_threads(threads_set):
-    with open(PROCESSED_FILE, "w", encoding="utf-8") as f:
-        json.dump(list(threads_set), f, indent=4)
-
-async def increment_supabase_count(attribute: str):
-    # Get current value
-    res = supabase.from_("miscinfo").select("count").eq("attribute", attribute).execute()
-    data = res.data
-    if data:
-        new_value = data[0]["count"] + 1
-        supabase.from_("miscinfo").update({"count": new_value}).eq("attribute", attribute).execute()
-    else:
-        supabase.from_("miscinfo").insert({"attribute": attribute, "count": 1}).execute()
-
-
-# --- Cog ---
-class DetectSlop(commands.Cog):
+class ForumScanner(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.processed_threads = load_processed_threads()
-        self.auto_scan.start()
 
-    def cog_unload(self):
-        self.auto_scan.cancel()
+        # Ensure processed JSON exists
+        if not os.path.exists(PROCESSED_JSON):
+            with open(PROCESSED_JSON, "w", encoding="utf-8") as f:
+                json.dump({"threads": []}, f, indent=4)
 
-    # --- Auto-scan task ---
-    @tasks.loop(minutes=5)
-    async def auto_scan(self):
-        """Automatically scan new threads/messages after Nov 9th, 2025."""
-        forum_channel = self.bot.get_channel(FORUM_CHANNEL_ID)
-        if not forum_channel:
-            return
+        # Load processed threads (be robust to either dict or list stored)
+        with open(PROCESSED_JSON, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+            if isinstance(raw, dict):
+                threads = raw.get("threads", [])
+            elif isinstance(raw, list):
+                threads = raw
+            else:
+                threads = []
+            self.processed_threads = set(threads)
 
-        after_date = datetime(2025, 11, 9, tzinfo=timezone.utc)
+        # Don't start the background task here; start it when the cog is fully loaded
+        # to ensure bot.guilds and channels are available.
 
-        # Scan active threads
-        threads = forum_channel.threads
-        # Scan archived threads
-        archived = await forum_channel.archived_threads(limit=None)
-        threads += archived.threads
+    async def cog_load(self):
+        # start the auto-scan task when the cog is loaded
+        try:
+            self.auto_scan_task.start()
+        except RuntimeError:
+            # task already running or bot not ready; ignore
+            pass
 
-        for thread in threads:
-            if thread.id in self.processed_threads:
+    def save_processed(self):
+        with open(PROCESSED_JSON, "w", encoding="utf-8") as f:
+            json.dump({"threads": list(self.processed_threads)}, f, indent=4)
+
+    async def process_message(self, message, update_counts: dict):
+        """
+        Process a single message for 'rejected' or 'accepted'.
+        Returns True if a keyword was found (to prevent double-counting).
+        """
+        if message.id in self.processed_threads:
+            return False
+
+        content = message.content.lower()
+
+        # Skip if first word pings Sergeant
+        if content.startswith(f"<@{AUTHORIZED_USER_ID}>") or (message.mentions and message.mentions[0].id == AUTHORIZED_USER_ID):
+            return False
+
+        # Rejected
+        if "rejected" in content:
+            update_counts["rejected"] += 1
+            self.processed_threads.add(message.id)
+            return True
+
+        # Accepted
+        if "accepted" in content and (f"<@{AUTHORIZED_USER_ID}>" in content or AUTHORIZED_USER_ID in [u.id for u in message.mentions]):
+            update_counts["accepted"] += 1
+            self.processed_threads.add(message.id)
+            return True
+
+        return False
+
+    async def scan_thread(self, thread, update_counts: dict):
+        """Scan all messages in a thread until first keyword found."""
+        try:
+            async for message in thread.history(limit=None, oldest_first=True):
+                found = await self.process_message(message, update_counts)
+                if found:
+                    break  # Stop after first keyword in this thread
+        except discord.Forbidden:
+            print(f"❌ Missing permissions to read thread {thread.id}")
+
+    async def scan_forum(self, after_datetime: datetime = None, update_counts: dict = None):
+        """Scan all threads in the forum channel."""
+        if update_counts is None:
+            update_counts = {"rejected": 0, "accepted": 0}
+
+        # Ensure after_datetime is timezone-aware (thread.created_at is timezone-aware).
+        if after_datetime is not None and after_datetime.tzinfo is None:
+            after_datetime = after_datetime.replace(tzinfo=timezone.utc)
+
+        guild = self.bot.get_guild(self.bot.guilds[0].id)  # use first guild
+        forum_channel = guild.get_channel(FORUM_CHANNEL_ID)
+        if forum_channel is None:
+            print("❌ Forum channel not found")
+            return update_counts
+
+        # --- Active threads ---
+        for thread in forum_channel.threads:
+            if after_datetime and thread.created_at < after_datetime:
                 continue
-            async for message in thread.history(limit=None, after=after_date):
-                if not message.webhook_id:
-                    continue
-                if not ("rejected" in message.content.lower() or "accepted" in message.content.lower()):
-                    continue
-                # Ignore if first word mentions Sergeant
-                if re.match(rf"^<@!?{TARGET_USER_ID}>", message.content.strip()):
-                    continue
+            await self.scan_thread(thread, update_counts)
 
-                mentions_sergeant = any(u.id == TARGET_USER_ID for u in message.mentions)
-                if mentions_sergeant:
-                    if "rejected" in message.content.lower():
-                        await increment_supabase_count("count 2")
-                    elif "accepted" in message.content.lower():
-                        await increment_supabase_count("count")
-                    self.processed_threads.add(thread.id)
-                    save_processed_threads(self.processed_threads)
-                    break  # stop after first keyword per thread
-
-    @auto_scan.before_loop
-    async def before_auto_scan(self):
-        await self.bot.wait_until_ready()
-
-    # --- Slash command: alltime_s ---
-    @commands.hybrid_command(name="alltime_s", description="Scan all forum posts for accepted/rejected counts")
-    async def alltime_s(self, ctx):
-        if ctx.author.id != TARGET_USER_ID:
-            await ctx.send("❌ You are not allowed to use this command.", ephemeral=True)
-            return
-
-        forum_channel = self.bot.get_channel(FORUM_CHANNEL_ID)
-        if not forum_channel:
-            await ctx.send("❌ Forum channel not found.", ephemeral=True)
-            return
-
-        rejected_count = 0
-        accepted_count = 0
-
-        # Active + archived threads
-        threads = forum_channel.threads
-        archived = await forum_channel.archived_threads(limit=None)
-        threads += archived.threads
-
-        for thread in threads:
-            if thread.id in self.processed_threads:
+        # --- Archived threads ---
+        # archived_threads is an async iterator; iterate directly
+        async for thread in forum_channel.archived_threads(limit=None):
+            if after_datetime and thread.created_at < after_datetime:
                 continue
-            async for message in thread.history(limit=None):
-                if not message.webhook_id:
-                    continue
-                content_lower = message.content.lower()
-                if not ("rejected" in content_lower or "accepted" in content_lower):
-                    continue
-                # Ignore if first word mentions Sergeant
-                if re.match(rf"^<@!?{TARGET_USER_ID}>", message.content.strip()):
-                    continue
-                mentions_sergeant = any(u.id == TARGET_USER_ID for u in message.mentions)
-                if mentions_sergeant:
-                    if "rejected" in content_lower:
-                        rejected_count += 1
-                    elif "accepted" in content_lower:
-                        accepted_count += 1
-                    self.processed_threads.add(thread.id)
-                    save_processed_threads(self.processed_threads)
-                    break  # stop after first keyword per thread
+            await self.scan_thread(thread, update_counts)
 
-        await ctx.send(f"✅ Rejected: {rejected_count}\n✅ Accepted: {accepted_count}", ephemeral=True)
+        # Save processed
+        self.save_processed()
+        return update_counts
+
+    @tasks.loop(minutes=10)
+    async def auto_scan_task(self):
+        """Automatically scan new threads/messages every 10 minutes."""
+        update_counts = {"rejected": 0, "accepted": 0}
+        # pass an explicit UTC-aware datetime to avoid naive/aware comparison errors
+        await self.scan_forum(after_datetime=datetime(2025, 11, 9, tzinfo=timezone.utc), update_counts=update_counts)
+        # Here you could add code to update Supabase with counts
+        print(f"Auto scan counts (since 2025-11-09): {update_counts}")
+
+    # Use a classic text command to avoid app command registration issues on load.
+    @commands.command(name="alltime_s")
+    async def alltime_s(self, ctx: commands.Context):
+        if ctx.author.id != AUTHORIZED_USER_ID:
+            await ctx.reply("❌ You are not allowed to use this command.", mention_author=False)
+            return
+
+        update_counts = {"rejected": 0, "accepted": 0}
+        await self.scan_forum(after_datetime=None, update_counts=update_counts)
+        await ctx.reply(f"📊 All-time counts:\nRejected: {update_counts['rejected']}\nAccepted: {update_counts['accepted']}", mention_author=False)
 
 
 async def setup(bot):
-    await bot.add_cog(DetectSlop(bot))
+    await bot.add_cog(ForumScanner(bot))

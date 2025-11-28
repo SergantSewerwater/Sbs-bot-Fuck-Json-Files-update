@@ -118,15 +118,12 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    if message.channel.id in BLOCKED_CHANNEL_IDS:
-        return
-
     if message.content.lower() == "slop ping":
-        current_count = await get_misc_value("ping_count", 0)
-        new_count = current_count + 1
-        await set_misc_value("ping_count", new_count)
-        await message.channel.send(f"Pong!\n-# Count: {new_count}")
-
+        if message.channel.id not in BLOCKED_CHANNEL_IDS:
+            current_count = await get_misc_value("ping_count", 0)
+            new_count = current_count + 1
+            await set_misc_value("ping_count", new_count)
+            await message.channel.send(f"Pong!\n-# Count: {new_count}")
         return
 
     await bot.process_commands(message)
