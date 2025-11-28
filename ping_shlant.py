@@ -56,7 +56,7 @@ class PingShlant(commands.Cog):
             save_points(self.points)
             return
         
-        if random.randint(1, 5) == 1:
+        if random.randint(1, 20) == 1:
             await interaction.response.send_message(f"<@1435850784410701835>")
             return
 
