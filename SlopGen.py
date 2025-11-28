@@ -84,7 +84,7 @@ COGS = [
     "Detect_Slop",
     "ng_link_better",
     "Alltendance",
-    "Butter",
+    "butter",
 ]
 
 # --- Events ---
