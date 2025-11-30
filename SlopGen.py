@@ -85,6 +85,7 @@ COGS = [
     "ng_link_better",
     "Alltendance",
     "butter",
+    "autoresponder",
 ]
 
 # --- Events ---

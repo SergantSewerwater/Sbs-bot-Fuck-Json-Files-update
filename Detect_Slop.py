@@ -2,6 +2,7 @@ import re
 import discord
 from discord.ext import commands
 import asyncio
+import random
 
 FORUM_CHANNEL_ID = 1352870773588623404
 
@@ -75,8 +76,17 @@ class ForumWatcher(commands.Cog):
             print(f"⌛ Timeout waiting for a message in '{thread.name}'. No bot message sent.")
             return
 
+        # 1-in-10,000,000 chance to append the special bonk GIF if author's name contains "bonk"
+        bonk_gif = "https://cdn.discordapp.com/attachments/1387158127312375831/1444038777655005245/attachment.gif?ex=692b4169&is=6929efe9&hm=5cb21655eab1204f5ccf8edd13e6c0f5007b6222d1d52e83707e3dd953d85991&"
+        bonk_lucky = False
+        if "bonk" in author_name:
+            # random chance: 1 / 10_000_000
+            bonk_lucky = (random.randint(1, 10_000_000) == 1)
+
         # === SINGLE-FIELD MESSAGES ===
         single_messages = []
+        if bonk_lucky:
+            single_messages.append(bonk_gif)
         if song == "applause":
             single_messages.append("shlant rn: 🤤")
         # keep old song_author check and remove duplicate if we also map via author name
