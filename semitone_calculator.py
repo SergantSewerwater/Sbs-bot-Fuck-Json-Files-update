@@ -51,21 +51,21 @@ keys = [
 ]
 
 enharmony = {
-    "C# Major": "Db Major", "D# Major": "Eb Major", "F# Major": "Gb Major",
-    "G# Major": "Ab Major", "A# Major": "Bb Major",
-    "A# Minor": "Bb Minor", "C# Minor": "Db Minor", "D# Minor": "Eb Minor",
-    "F# Minor": "Gb Minor", "G# Minor": "Ab Minor",
-    "G# Mixolydian": "Ab Mixolydian", "A# Mixolydian": "Bb Mixolydian",
-    "C# Mixolydian": "Db Mixolydian", "D# Mixolydian": "Eb Mixolydian",
-    "F# Mixolydian": "Gb Mixolydian",
-    "G# Dorian": "Ab Dorian", "A# Dorian": "Bb Dorian", "D# Dorian": "Eb Dorian",
-    "F# Dorian": "Gb Dorian", "C# Dorian": "Db Dorian",
-    "A# Phrygian": "Bb Phrygian", "D# Phrygian": "Eb Phrygian",
-    "F# Phrygian": "Gb Phrygian", "G# Phrygian": "Ab Phrygian",
-    "C# Lydian": "Db Lydian", "D# Lydian": "Eb Lydian",
-    "F# Lydian": "Gb Lydian", "G# Lydian": "Ab Lydian", "A# Lydian": "Bb Lydian",
-    "A# Locrian": "Bb Locrian", "C# Locrian": "Db Locrian",
-    "D# Locrian": "Eb Locrian", "F# Locrian": "Gb Locrian", "G# Locrian": "Ab Locrian"
+    "Db Major": "C# Major", "Eb Major": "D# Major", "Gb Major": "F# Major",
+    "Ab Major": "G# Major", "Bb Major": "A# Major",
+    "Bb Minor": "A# Minor", "Db Minor": "C# Minor", "Eb Minor": "D# Minor",
+    "Gb Minor": "F# Minor", "Ab Minor": "G# Minor",
+    "Ab Mixolydian": "G# Mixolydian", "Bb Mixolydian": "A# Mixolydian",
+    "Db Mixolydian": "C# Mixolydian", "Eb Mixolydian": "D# Mixolydian",
+    "Gb Mixolydian": "F# Mixolydian",
+    "Ab Dorian": "G# Dorian", "Bb Dorian": "A# Dorian", "Eb Dorian": "D# Dorian",
+    "Gb Dorian": "F# Dorian", "Db Dorian": "C# Dorian",
+    "Bb Phrygian": "A# Phrygian", "Eb Phrygian": "D# Phrygian",
+    "Gb Phrygian": "F# Phrygian", "Ab Phrygian": "G# Phrygian",
+    "Db Lydian": "C# Lydian", "Eb Lydian": "D# Lydian",
+    "Gb Lydian": "F# Lydian", "Ab Lydian": "G# Lydian", "Bb Lydian": "A# Lydian",
+    "Bb Locrian": "A# Locrian", "Db Locrian": "C# Locrian",
+    "Eb Locrian": "D# Locrian", "Gb Locrian": "F# Locrian", "Ab Locrian": "G# Locrian"
 }
 
 # Normalize keys
