@@ -366,7 +366,7 @@ async def remove_banned_combo(song1, song2):
 
 # --- Role check ---
 def has_jammer_role(interaction: discord.Interaction) -> bool:
-    required_role_id = 938030258253361192
+    required_role_id = 1404311576764350526
     member = interaction.guild.get_member(interaction.user.id) if interaction.guild else None
     if not member:
         return False
