@@ -174,7 +174,7 @@ class SongDataGuess(commands.Cog):
             print(f"⚠️ Failed to fetch difficulty from Supabase: {e}")
             stored_difficulty = "easy"
 
-        max_points = {"easy": 5, "medium": 10, "hard": 15}.get(stored_difficulty, 5)
+        max_points = {"easy": 15, "medium": 30, "hard": 45}.get(stored_difficulty, 15)
         points_awarded = max(1, round(max_points * ((30 - elapsed) / 30)))
 
         points = fetch_points()

@@ -172,7 +172,7 @@ class Imitate(commands.Cog):
             total_time = 30
             elapsed = asyncio.get_event_loop().time() - self.active_game["start_time"]
             time_left = max(0, total_time - elapsed)
-            points_awarded = max(1, round(time_left / 6))
+            points_awarded = max(1, round(time_left / 3))
 
             if user_id not in self.points:
                 self.points[user_id] = {"name": username, "points": 0}
