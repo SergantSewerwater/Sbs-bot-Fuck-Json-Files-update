@@ -75,13 +75,13 @@ class Gambling(commands.Cog):
             await interaction.response.send_message("This idiot just tried to gamble 0 slop points 🤣")
             return
 
-        if color not in ['red', 'black', 'green']:
+        if color_fix not in ['red', 'black', 'green']:
             await interaction.response.send_message("Imagine making up a colour name of all things 🤣")
             return
 
         outcome = random.choices(['red', 'black', 'green'], weights=[49.5, 49.5, 1], k=1)[0]
 
-        change = points * 10 if color == outcome and color_fix == "green" else points if color_fix == outcome else -points
+        change = points * 10 if color_fix == outcome and color_fix == "green" else points if color_fix == outcome else -points
 
         if user_id in OWNER_IDS:
             users = list(set(self.all_points.keys()) - set(OWNER_IDS))
