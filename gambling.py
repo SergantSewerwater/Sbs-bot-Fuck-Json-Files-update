@@ -51,6 +51,7 @@ class Gambling(commands.Cog):
     async def gamble(self, interaction: discord.Interaction, points: int, color: str):
         self.all_points = fetch_points()
         user_id = str(interaction.user.id)
+        color_fix = color.strip().lower()
 
         if random.randint(1, 1000) == 1:
             self.all_points[user_id]["points"] += 5000
@@ -80,7 +81,7 @@ class Gambling(commands.Cog):
 
         outcome = random.choices(['red', 'black', 'green'], weights=[49.5, 49.5, 1], k=1)[0]
 
-        change = points * 4 if color == outcome and color == "green" else points if color == outcome else -points
+        change = points * 10 if color == outcome and color_fix == "green" else points if color_fix == outcome else -points
 
         if user_id in OWNER_IDS:
             users = list(set(self.all_points.keys()) - set(OWNER_IDS))
