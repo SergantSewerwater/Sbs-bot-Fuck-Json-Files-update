@@ -56,14 +56,14 @@ class SlopMining(commands.Cog):
             return
         
         outcome = random.randint(1, 200)
-        if outcome <= 140:
+        if outcome <= 150:
             earned = random.randint(1, 3)
-        elif 141 <= outcome <= 170:
+        elif 151 <= outcome <= 170:
             earned = random.randint(4, 10)
         elif 171 <= outcome <= 180:
             earned = random.randint(11, 20)
         elif 181 <= outcome <= 190:
-            earned = random.randint(20, 50)
+            earned = random.randint(21, 50)
         elif 191 <= outcome <= 195:
             earned = random.randint(51, 100)
         elif 196 <= outcome <= 199:
