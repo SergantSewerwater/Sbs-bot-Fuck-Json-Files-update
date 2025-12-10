@@ -55,19 +55,21 @@ class SlopMining(commands.Cog):
             save_points(self.points)
             return
         
-        outcome = random.randint(1, 100)
-        if outcome <= 60:
+        outcome = random.randint(1, 200)
+        if outcome <= 140:
             earned = random.randint(1, 3)
-        elif 61 <= outcome <= 80:
+        elif 141 <= outcome <= 170:
             earned = random.randint(4, 10)
-        elif 81 <= outcome <= 90:
+        elif 171 <= outcome <= 180:
             earned = random.randint(11, 20)
-        elif 91 <= outcome <= 95:
-            earned = random.randint(26, 50)
-        elif 96 <= outcome <= 99:
-            earned = random.randint(51, 200)
+        elif 181 <= outcome <= 190:
+            earned = random.randint(20, 50)
+        elif 191 <= outcome <= 195:
+            earned = random.randint(51, 100)
+        elif 196 <= outcome <= 199:
+            earned = random.randint(101, 200)
         else:
-            earned = random.randint(201, 1000)
+            earned = random.randint(251, 1000)
         self.points[user_id]["points"] += earned
         await interaction.response.send_message(f"You mined {earned} Slop Points, you have {self.points[user_id]['points']} Slop Points.")
         save_points(self.points)
