@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 import os
 from dotenv import load_dotenv
 from supabase import create_client
@@ -10,6 +11,30 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SERVICE_ROLE_KEY = os.getenv("SERVICE_ROLE_KEY")
 if not SUPABASE_URL or not SERVICE_ROLE_KEY:
     raise ValueError("SUPABASE_URL or SERVICE_ROLE_KEY not found in environment variables.")
+
+# ---------------------- POINTS HELPERS ----------------------
+def fetch_points():
+    """Load all points from Supabase (normalize to ints)."""
+    res = supabase.table("points").select("*").execute()
+    points = {}
+    for row in (res.data or []):
+        points[str(row["user_id"])] = {
+            "name": row.get("name", "Unknown"),
+            "points": int(row.get("points", 0))
+        }
+    return points
+
+def save_points(points: dict):
+    """Upsert points to Supabase (store ints)."""
+    payload = []
+    for user_id, info in points.items():
+        payload.append({
+            "user_id": user_id,
+            "name": info.get("name", "Unknown"),
+            "points": int(info.get("points", 0))
+        })
+    if payload:
+        supabase.table("points").upsert(payload).execute()
 
 # create supabase client for this cog (uses same env as SlopGen)
 supabase = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
@@ -101,6 +126,18 @@ class Butter(commands.Cog):
             except Exception:
                 # ignore Supabase errors so the bot remains functional
                 pass
+
+    # --- /butter ---
+    @app_commands.command(name="butter", description="Check how many times Margaryna has been buttered")
+    async def butter(self, interaction: discord.Interaction):
+        res = supabase.from_("miscinfo").select("count").eq("id", 3).execute()
+        if res.data and len(res.data) > 0:
+            try:
+                count = int(res.data[0].get("count", 0))
+            except Exception:
+                count = 0
+        await interaction.response.send_message(f"Margaryna has been buttered {count} times.")
+
 
 async def setup(bot):
     await bot.add_cog(Butter(bot))
