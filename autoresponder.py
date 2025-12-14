@@ -33,9 +33,9 @@ class AutoResponder(commands.Cog):
         
         content = message.content.lower()
         for keywords, response in autoresponses.items():
-            if all(keyword in content for keyword in keywords):
+            if any(keyword in content for keyword in keywords):
                 await message.channel.send(f"{response}\n{message.author.mention}")
-                break
+                return
         
 async def setup(bot: commands.Bot):
     await bot.add_cog(AutoResponder(bot))
