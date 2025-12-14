@@ -74,21 +74,6 @@ class SlopMining(commands.Cog):
         await interaction.response.send_message(f"You mined {earned} Slop Points, you have {self.points[user_id]['points']} Slop Points.")
         save_points(self.points)
         return
-
-    @app_commands.command(name="funny_command", description="funny command")
-    async def funny_command(self, interaction: discord.Interaction):
-        self.points = fetch_points()
-        user_id = str(interaction.user.id)
-        if self.points[user_id]["points"] < 0:
-            await interaction.response.send_message("Bro is in slop debt")
-            return
-        if random.randint(1, 10) == 10:
-            self.points[user_id]["points"] = -(self.points[user_id]["points"])
-        else:
-            self.points[user_id]["points"] += 5000
-        save_points(self.points)
-        await interaction.response.send_message(f"You now have {self.points[user_id]["points"]} Slop Points.")
-        return
     
 # cog loader
 async def setup(bot: commands.Bot):
