@@ -86,6 +86,7 @@ COGS = [
     "Alltendance",
     "butter",
     "autoresponder",
+    "scambanner",
 ]
 
 # --- Events ---
