@@ -1,16 +1,7 @@
 import discord
-import logging
 from discord.ext import commands
 
 IGNORED_ROLE_ID = 1429783971654406195
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    filename='discord.log',
-    encoding='utf-8',
-    filemode='w',
-    format='%(asctime)s:%(levelname)s:%(name)s: %(message)s'
-)
 
 # Detect attachments that are images
 def attachment_is_image(att: discord.Attachment) -> bool:
@@ -40,31 +31,27 @@ class ScamBanner(commands.Cog):
             attachment_is_image(att) for att in message.attachments
         ):
             try:
-                await message.author.ban(
-                    reason="Sent 4+ image attachments (auto scamban)"
-                )
-            except discord.Forbidden:
-                logging.error("Missing permissions to ban this member.")
-                print("Missing permissions to ban this member.")
-            except discord.HTTPException as e:
-                logging.error(f"Failed to ban member: {e}")
-                print(f"Failed to ban member: {e}")
-
-            try:
-                await message.delete()
-            except discord.Forbidden:
-                logging.error("Missing permissions to delete message.")
-                print("Missing permissions to delete message.")
-       
-            try:
                 await message.author.send(
                     "You have been banned by the automatic scam detector for sending 4 or more image attachments in a single message.\n"
                     "If you believe this was a mistake, please contact **sergeantsewerwater**.\n"
                     "Users who reach level 2 or higher are ignored by this system."
                 )
             except discord.Forbidden:
-                logging.error("Missing permissions to send DM to the user.")
                 print("Missing permissions to send DM to the user.")
+
+            try:
+                await message.author.ban(
+                    reason="Sent 4+ image attachments (auto scamban)"
+                )
+            except discord.Forbidden:
+                print("Missing permissions to ban this member.")
+            except discord.HTTPException as e:
+                print(f"Failed to ban member: {e}")
+
+            try:
+                await message.delete()
+            except discord.Forbidden:
+                print("Missing permissions to delete message.")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(ScamBanner(bot))
