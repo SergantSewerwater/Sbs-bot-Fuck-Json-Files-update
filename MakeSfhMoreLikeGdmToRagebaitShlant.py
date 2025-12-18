@@ -99,19 +99,11 @@ class AttachmentReactor(commands.Cog):
         # only trigger in target channel
         if message.channel.id != self.target_channel_id:
             return
-
-        # skip if no attachments
-        if not message.attachments:
-            return
-
-        # check for audio attachments and add reactions
-        for attachment in message.attachments:
-            if attachment.content_type and attachment.content_type.startswith("audio/"):
-                await message.add_reaction(self.upvote_emoji)
-                await message.add_reaction(self.downvote_emoji)
-                await message.add_reaction("🔥")
-                await message.add_reaction("🔇")
-                break  # only react once per message
+        
+        await message.add_reaction(self.upvote_emoji)
+        await message.add_reaction(self.downvote_emoji)
+        await message.add_reaction("🔥")
+        await message.add_reaction("🔇")
 
  # --- Add points when someone upvotes an audio message ---
     @commands.Cog.listener()
