@@ -1,11 +1,8 @@
-from email import message
 import discord
 from discord.ext import commands
 
 TARGET_CHANNEL_ID = 899784386038333555
 IGNORED_ROLE_ID = 1429783971654406195
-
-
 
 # dict of auto responses
 autoresponses = {
@@ -50,91 +47,6 @@ class AutoResponder(commands.Cog):
             if keyword in content:
                 await message.channel.send(f"{response}\n{message.author.mention}")
                 return
-
-
-# --- scambanner ---
-@commands.Cog.listener()
-async def on_message(self, message: discord.Message):
-    # Ignore bots
-    if message.guild is None or message.guild.id != 899784386038333551:
-        return
     
-    if message.author.bot:
-        return
-    
-
-    # Ensure this is a guild member (not a DM user)
-    if not isinstance(message.author, discord.Member):
-        return
-
-    # Ignore members with the ignored role
-    if any(role.id == IGNORED_ROLE_ID for role in message.author.roles):
-        return
-
-
-    
-
-# Detect attachments that are images
-def attachment_is_image(att: discord.Attachment) -> bool:
-    return bool(att.content_type) and att.content_type.startswith("image/")
-
-
-# --- scambanner ---
-@commands.Cog.listener()
-async def on_message(self, message: discord.Message):
-    # Ignore DMs & wrong guild
-    if message.guild is None or message.guild.id != 899784386038333551:
-        return
-
-    # Ignore bots
-    if message.author.bot:
-        return
-
-    # Ensure this is a guild member
-    if not isinstance(message.author, discord.Member):
-        return
-
-    # Ignore members with the ignored role (level 2+)
-    if any(role.id == IGNORED_ROLE_ID for role in message.author.roles):
-        return
-
-    # Check attachment count AND image-only
-    if len(message.attachments) >= 3 and all(
-        attachment_is_image(att) for att in message.attachments
-    ):
-       
-        try:
-            await message.author.send(
-                "You have been banned by the automatic scam detector for sending "
-                "3 or more image attachments in a single message.\n\n"
-                "If you believe this was a mistake, please contact **sergeantsewerwater**.\n"
-                "Users who reach level 2 or higher are ignored by this system."
-            )
-        except discord.Forbidden:
-            pass
-
-   
-        try:
-            await message.delete()
-        except discord.Forbidden:
-            pass
-
-      
-        try:
-            await message.author.ban(
-                reason="Sent 3+ image attachments (auto scamban)"
-            )
-        except discord.Forbidden:
-            print("Missing permissions to ban this member.")
-        except discord.HTTPException as e:
-            print(f"Failed to ban member: {e}")
-
-        return
-
-
-            
-
-
-        
 async def setup(bot: commands.Bot):
     await bot.add_cog(AutoResponder(bot))
