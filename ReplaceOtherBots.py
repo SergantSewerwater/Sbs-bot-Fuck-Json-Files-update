@@ -96,7 +96,7 @@ STICKY_CHANNELS = {
  1453008993692942436
 }
 
-STICKY_CONTENT = "hello"
+STICKY_CONTENT = ""
 
 
 # --- Member Count ---
@@ -110,16 +110,17 @@ class MemberCount(commands.Cog):
         member_count = max((guild.member_count or 0) - 5, 0)
 
         channel = guild.get_channel(MEMBER_COUNT_CHANNEL_ID)
-        if channel is None or not isinstance(channel, discord.TextChannel):
+        if channel is None:
+            logger.warning("Member count channel %s not found in guild %s", MEMBER_COUNT_CHANNEL_ID, guild.id)
             return
 
-        # Delete previous bot messages
-        async for msg in channel.history(limit=50):
-            if msg.author == self.bot.user:
-                await msg.delete()
-
-        # Send updated count
-        await channel.send(f"👥 **Member Count:** {member_count}")
+        # Update the channel name to reflect the current member count. This requires Manage Channels permission.
+        new_name = f"👥 Members: {member_count}"
+        try:
+            await channel.edit(name=new_name)
+            logger.info("Updated member count channel %s name to '%s'", channel.id, new_name)
+        except Exception:
+            logger.exception("Failed to edit member count channel %s in guild %s", channel.id, guild.id)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
