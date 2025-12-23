@@ -92,7 +92,7 @@ COGS = [
 # --- Events ---
 @bot.event
 async def on_ready():
-    print(message.guild.me.guild_permissions)
+
 
     try:
         for cog in COGS:

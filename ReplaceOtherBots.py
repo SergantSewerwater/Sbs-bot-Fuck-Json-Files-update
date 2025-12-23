@@ -29,7 +29,7 @@ class AutoResponder(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    # --- listener ---
+    # --- No Questions In General ---
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot:
@@ -47,6 +47,69 @@ class AutoResponder(commands.Cog):
             if keyword in content:
                 await message.channel.send(f"{response}\n{message.author.mention}")
                 return
-    
+# --- Delete Stuff In #Submit-Here
+@commands.Cog.listener()
+async def on_message(self, message: discord.Message):
+    if message.channel.id != 1352915632936718386:
+        return
+
+    if message.author.id != 1272790489380421643:
+        await message.delete()
+        return
+
+
+
+# --- StickyBot
+STICKY_CHANNELS = {
+ 1349678108768469037
+}
+
+STICKY_CONTENT = ""
+
+@commands.Cog.listener()
+async def on_message(self, message: discord.Message):
+    if not STICKY_CONTENT:
+        return
+    if message.channel.id not in STICKY_CHANNELS:
+        return
+
+    if message.author == self.bot.user:
+        return
+
+    channel = message.channel
+
+    async for msg in channel.history(limit=20):
+        if msg.author == self.bot.user:
+            await msg.delete()
+            break
+
+    await channel.send(STICKY_CONTENT)
+    await self.bot.process_commands(message)
+
+# --- Member Count ---
+MEMBER_COUNT_CHANNEL_ID = 1453008993692942436
+
+async def update_member_count(self, guild: discord.Guild):
+        MEMBER_COUNT = guild.member_count - 5
+        channel = guild.get_channel(MEMBER_COUNT_CHANNEL_ID)
+        if channel is None or not isinstance(channel, discord.TextChannel):
+            return
+
+        async for msg in channel.history(limit=50):
+            if msg.author == self.bot.user:
+                await msg.delete()
+
+        await channel.send(f"👥 **Member Count:** {MEMBER_COUNT}")
+
+@commands.Cog.listener()
+async def on_member_join(self, member: discord.Member):
+        await self.update_member_count(member.guild)
+
+@commands.Cog.listener()
+async def on_member_remove(self, member: discord.Member):
+        await self.update_member_count(member.guild)
+
+
+
 async def setup(bot: commands.Bot):
     await bot.add_cog(AutoResponder(bot))
