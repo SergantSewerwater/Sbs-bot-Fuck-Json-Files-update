@@ -1,8 +1,16 @@
 import discord
 from discord.ext import commands
+import logging
+from typing import Set
+
+# Logger for this module
+logger = logging.getLogger("sbsbot.ReplaceOtherBots")
+if not logging.getLogger().handlers:
+    logging.basicConfig(level=logging.INFO)
 
 TARGET_CHANNEL_ID = 899784386038333555
 IGNORED_ROLE_ID = 1429783971654406195
+SUBMIT_CHANNEL_ID = 1352915632936718386
 
 # dict of auto responses
 autoresponses = {
@@ -25,39 +33,63 @@ autoresponses = {
     "?": "Have questions? Read <#1201831020890951680> and the pinned post in <#1352870773588623404>\nOtherwise, go to <#1302962232015192115>",
 }
 
-class AutoResponder(commands.Cog):
+class ReplaceOtherBots(commands.Cog):
+    """Consolidated cog that handles autoresponses, submit-channel deletions and sticky messages."""
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.logger = logger
 
-    # --- No Questions In General ---
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        # Ignore bots early
         if message.author.bot:
             return
 
-        if message.channel.id != TARGET_CHANNEL_ID:
-            return
+        try:
+            # --- Delete stuff in #submit-here
+            if message.channel.id == SUBMIT_CHANNEL_ID:
+                if message.author.id != 1272790489380421643:
+                    self.logger.info("Deleting message from %s in submit channel %s", message.author, message.channel.id)
+                    try:
+                        await message.delete()
+                    except Exception:
+                        self.logger.exception("Failed to delete message in submit channel from %s", message.author)
+                    return
 
-        if isinstance(message.author, discord.Member):
-            if any(role.id == IGNORED_ROLE_ID for role in message.author.roles):
-                return
-        
-        content = message.content.lower()
-        for keyword, response in autoresponses.items():
-            if keyword in content:
-                await message.channel.send(f"{response}\n{message.author.mention}")
-                return
-# --- Delete Stuff In #Submit-Here
-@commands.Cog.listener()
-async def on_message(self, message: discord.Message):
-    if message.channel.id != 1352915632936718386:
-        return
+            # --- Auto responses in the target channel
+            if message.channel.id == TARGET_CHANNEL_ID:
+                if isinstance(message.author, discord.Member) and any(role.id == IGNORED_ROLE_ID for role in message.author.roles):
+                    self.logger.debug("Skipping autoresponse because user has ignored role: %s", message.author)
+                else:
+                    content = message.content.lower()
+                    for keyword, response in autoresponses.items():
+                        if keyword in content:
+                            self.logger.info("Autoresponding to %s for keyword '%s'", message.author, keyword)
+                            await message.channel.send(f"{response}\n{message.author.mention}")
+                            return
 
-    if message.author.id != 1272790489380421643:
-        await message.delete()
-        return
+            # --- Sticky message behavior
+            if STICKY_CONTENT and message.channel.id in STICKY_CHANNELS:
+                if message.author != self.bot.user:
+                    # Remove the bot's previous sticky message (if any)
+                    async for msg in message.channel.history(limit=50):
+                        if msg.author == self.bot.user:
+                            try:
+                                await msg.delete()
+                                self.logger.debug("Deleted previous sticky message %s in channel %s", msg.id, message.channel.id)
+                            except Exception:
+                                self.logger.exception("Failed to delete old sticky message %s", msg.id)
+                            break
 
+                    self.logger.info("Posting sticky message to channel %s", message.channel.id)
+                    await message.channel.send(STICKY_CONTENT)
 
+        except Exception:
+            self.logger.exception("Uncaught exception in ReplaceOtherBots.on_message")
+        finally:
+            # Ensure commands still work when on_message is present
+            await self.bot.process_commands(message)
 
 # --- StickyBot
 STICKY_CHANNELS = {
@@ -66,25 +98,6 @@ STICKY_CHANNELS = {
 
 STICKY_CONTENT = "hello"
 
-@commands.Cog.listener()
-async def on_message(self, message: discord.Message):
-    if not STICKY_CONTENT:
-        return
-    if message.channel.id not in STICKY_CHANNELS:
-        return
-
-    if message.author == self.bot.user:
-        return
-
-    channel = message.channel
-
-    async for msg in channel.history(limit=20):
-        if msg.author == self.bot.user:
-            await msg.delete()
-            break
-
-    await channel.send(STICKY_CONTENT)
-    await self.bot.process_commands(message)
 
 # --- Member Count ---
 MEMBER_COUNT_CHANNEL_ID = 1453008993692942436
@@ -94,7 +107,7 @@ class MemberCount(commands.Cog):
         self.bot = bot
 
     async def update_member_count(self, guild: discord.Guild):
-        member_count = max(guild.member_count - 5, 0)
+        member_count = max((guild.member_count or 0) - 5, 0)
 
         channel = guild.get_channel(MEMBER_COUNT_CHANNEL_ID)
         if channel is None or not isinstance(channel, discord.TextChannel):
@@ -120,4 +133,6 @@ class MemberCount(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(AutoResponder(bot))
+    logger.info("Registering ReplaceOtherBots and MemberCount cogs")
+    await bot.add_cog(ReplaceOtherBots(bot))
+    await bot.add_cog(MemberCount(bot))
