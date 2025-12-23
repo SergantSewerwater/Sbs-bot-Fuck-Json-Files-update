@@ -105,30 +105,60 @@ MEMBER_COUNT_CHANNEL_ID = 1453008993692942436
 class MemberCount(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.logger = logger
+        self._started = False
 
     async def update_member_count(self, guild: discord.Guild):
         member_count = max((guild.member_count or 0) - 5, 0)
+        self.logger.info("Updating member count for guild %s: calculated %s", guild.id, member_count)
 
         channel = guild.get_channel(MEMBER_COUNT_CHANNEL_ID)
         if channel is None:
-            logger.warning("Member count channel %s not found in guild %s", MEMBER_COUNT_CHANNEL_ID, guild.id)
+            self.logger.warning("Member count channel %s not found in guild %s", MEMBER_COUNT_CHANNEL_ID, guild.id)
             return
 
         # Update the channel name to reflect the current member count. This requires Manage Channels permission.
-        new_name = f"👥 Members: {member_count}"
+        new_name = f"Members: {member_count}"
         try:
             await channel.edit(name=new_name)
-            logger.info("Updated member count channel %s name to '%s'", channel.id, new_name)
+            self.logger.info("Updated member count channel %s name to '%s'", channel.id, new_name)
+        except discord.Forbidden:
+            self.logger.error("Missing permissions to edit channel %s in guild %s", channel.id, guild.id)
         except Exception:
-            logger.exception("Failed to edit member count channel %s in guild %s", channel.id, guild.id)
+            self.logger.exception("Failed to edit member count channel %s in guild %s", channel.id, guild.id)
+
+    @commands.command(name="refresh_members")
+    @commands.has_permissions(manage_guild=True)
+    async def refresh_members(self, ctx: commands.Context):
+        """Manually refresh the member count channel name for this guild."""
+        if ctx.guild is None:
+            await ctx.send("This command can only be used in a server/guild.")
+            return
+        await self.update_member_count(ctx.guild)
+        await ctx.send("Member count refreshed.")
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        self.logger.debug("on_member_join: %s in guild %s", member, member.guild.id)
         await self.update_member_count(member.guild)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
+        self.logger.debug("on_member_remove: %s in guild %s", member, member.guild.id)
         await self.update_member_count(member.guild)
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        # Run once on ready to ensure the channel is correct
+        if self._started:
+            return
+        self._started = True
+        self.logger.info("MemberCount cog running startup refresh for %s guilds", len(self.bot.guilds))
+        for g in self.bot.guilds:
+            try:
+                await self.update_member_count(g)
+            except Exception:
+                self.logger.exception("Error updating member count for guild %s on startup", g.id)
 
 
 
