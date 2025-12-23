@@ -89,25 +89,33 @@ async def on_message(self, message: discord.Message):
 # --- Member Count ---
 MEMBER_COUNT_CHANNEL_ID = 1453008993692942436
 
-async def update_member_count(self, guild: discord.Guild):
-        MEMBER_COUNT = guild.member_count - 5
+class MemberCount(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    async def update_member_count(self, guild: discord.Guild):
+        member_count = max(guild.member_count - 5, 0)
+
         channel = guild.get_channel(MEMBER_COUNT_CHANNEL_ID)
         if channel is None or not isinstance(channel, discord.TextChannel):
             return
 
+        # Delete previous bot messages
         async for msg in channel.history(limit=50):
             if msg.author == self.bot.user:
                 await msg.delete()
 
-        await channel.send(f"👥 **Member Count:** {MEMBER_COUNT}")
+        # Send updated count
+        await channel.send(f"👥 **Member Count:** {member_count}")
 
-@commands.Cog.listener()
-async def on_member_join(self, member: discord.Member):
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
         await self.update_member_count(member.guild)
 
-@commands.Cog.listener()
-async def on_member_remove(self, member: discord.Member):
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
         await self.update_member_count(member.guild)
+
 
 
 

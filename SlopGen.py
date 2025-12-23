@@ -85,7 +85,7 @@ COGS = [
     "ng_link_better",
     "Alltendance",
     "butter",
-    "autoresponder",
+    "ReplaceOtherBots",
     "scambanner",
 ]
 
