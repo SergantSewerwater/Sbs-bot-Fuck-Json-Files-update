@@ -61,10 +61,10 @@ async def on_message(self, message: discord.Message):
 
 # --- StickyBot
 STICKY_CHANNELS = {
- 1349678108768469037
+ 1453008993692942436
 }
 
-STICKY_CONTENT = ""
+STICKY_CONTENT = "hello"
 
 @commands.Cog.listener()
 async def on_message(self, message: discord.Message):
