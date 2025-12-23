@@ -4,6 +4,7 @@ from discord.ext import commands
 import logging
 from dotenv import load_dotenv
 import os
+import asyncio
 from supabase import create_client
 
 # --- Load environment variables ---
@@ -35,25 +36,50 @@ BLOCKED_CHANNEL_IDS = [
 ]
 
 # --- Supabase helpers ---
+# These helpers run potentially-blocking supabase calls in the default executor to avoid blocking the event loop.
 async def get_misc_value(attribute: str, default: int = 0) -> int:
-    """Fetch the count of an attribute from Supabase."""
-    res = supabase.from_("miscinfo").select("count").eq("attribute", attribute).execute()
-    data = res.data
-    if data:
-        return data[0]["count"]
-    return default
+    """Fetch the count of an attribute from Supabase (runs in executor)."""
+    loop = asyncio.get_running_loop()
+
+    def _sync_get():
+        res = supabase.from_("miscinfo").select("count").eq("attribute", attribute).execute()
+        data = getattr(res, "data", None)
+        if data:
+            return data[0]["count"]
+        return default
+
+    try:
+        return await loop.run_in_executor(None, _sync_get)
+    except Exception:
+        logging.exception("Failed to fetch misc value %s", attribute)
+        return default
 
 async def set_misc_value(attribute: str, value: int):
-    """Set the count of an attribute in Supabase (update if exists, insert if not)."""
-    res = supabase.from_("miscinfo").update({"count": value}).eq("attribute", attribute).execute()
-    if res.count == 0:
-        supabase.from_("miscinfo").insert({"attribute": attribute, "count": value}).execute()
+    """Set the count of an attribute in Supabase (runs in executor)."""
+    loop = asyncio.get_running_loop()
+
+    def _sync_set():
+        res = supabase.from_("miscinfo").update({"count": value}).eq("attribute", attribute).execute()
+        if getattr(res, "count", 0) == 0:
+            supabase.from_("miscinfo").insert({"attribute": attribute, "count": value}).execute()
+
+    try:
+        await loop.run_in_executor(None, _sync_set)
+    except Exception:
+        logging.exception("Failed to set misc value %s to %s", attribute, value)
 
 
 # --- Bot setup ---
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+
+# --- Ping buffering to avoid frequent DB writes ---
+_ping_lock: asyncio.Lock = asyncio.Lock()
+_ping_persisted: int = 0
+_ping_pending: int = 0
+_ping_flush_task: asyncio.Task | None = None
+_ping_flush_interval: int = 10  # seconds between flushes to Supabase
 
 def case_insensitive_prefix(bot, message):
     prefixes = ['slop ']
@@ -93,8 +119,13 @@ COGS = [
 @bot.event
 async def on_ready():
 
+    # Initialize ping buffering primitives
+    global _ping_lock, _ping_persisted, _ping_flush_task
+    if _ping_lock is None:
+        _ping_lock = asyncio.Lock()
 
     try:
+        # Load extensions
         for cog in COGS:
             try:
                 await bot.load_extension(cog)
@@ -103,6 +134,18 @@ async def on_ready():
             except Exception as e:
                 logging.error(f"❌ Failed to load {cog}: {e}")
                 print(f"❌ Failed to load {cog}: {e}")
+
+        # Load persisted ping value once using executor-safe helper
+        try:
+            _ping_persisted = await get_misc_value("ping_count", 0)
+            logging.info("Initial ping_count loaded: %s", _ping_persisted)
+        except Exception:
+            logging.exception("Failed to load initial ping_count; defaulting to 0")
+            _ping_persisted = 0
+
+        # Start background flush task (if not already running)
+        if _ping_flush_task is None or _ping_flush_task.done():
+            _ping_flush_task = asyncio.create_task(_ping_flush_loop())
 
         guild = discord.Object(id=GUILD_ID)
         synced_guild = await bot.tree.sync(guild=guild)
@@ -124,15 +167,48 @@ async def on_ready():
 async def on_message(message):
     if message.content.lower() == "slop ping":
         if message.channel.id not in BLOCKED_CHANNEL_IDS:
-            current_count = await get_misc_value("ping_count", 0)
-            new_count = current_count + 1
-            await set_misc_value("ping_count", new_count)
-            await message.channel.send(f"Pong!\n-# Count: {new_count}")
+            # Use buffered ping counter to avoid frequent DB writes
+            global _ping_pending, _ping_persisted
+            async with _ping_lock:
+                _ping_pending += 1
+                local_total = _ping_persisted + _ping_pending
+
+            await message.channel.send(f"Pong!\n-# Count: {local_total}")
         return
 
     await bot.process_commands(message)
 
-# --- Run bot ---
+# --- Background flush loop ---
+async def _ping_flush_loop():
+    global _ping_pending, _ping_persisted
+    while True:
+        await asyncio.sleep(_ping_flush_interval)
+        # Atomically take pending value
+        async with _ping_lock:
+            pending = _ping_pending
+            _ping_pending = 0
+        if pending <= 0:
+            continue
 
+        new_total = _ping_persisted + pending
+        loop = asyncio.get_running_loop()
+
+        def _sync_flush():
+            res = supabase.from_("miscinfo").update({"count": new_total}).eq("attribute", "ping_count").execute()
+            if getattr(res, "count", 0) == 0:
+                supabase.from_("miscinfo").insert({"attribute": "ping_count", "count": new_total}).execute()
+
+        try:
+            await loop.run_in_executor(None, _sync_flush)
+            _ping_persisted = new_total
+            logging.info("Flushed %s pings to Supabase; new total %s", pending, new_total)
+        except Exception:
+            logging.exception("Failed to flush ping buffer to Supabase; re-adding pending")
+            # Re-add pending back to buffer for retry
+            async with _ping_lock:
+                _ping_pending += pending
+
+
+# --- Run bot ---
 bot.run(token)
 
