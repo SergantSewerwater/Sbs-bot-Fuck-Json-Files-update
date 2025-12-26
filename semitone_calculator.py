@@ -6,6 +6,12 @@ import os
 import random
 from supabase import create_client, Client
 from dotenv import load_dotenv
+import logging
+
+# Initialize module logger (don't reconfigure root if already configured)
+logger = logging.getLogger(__name__)
+if not logging.getLogger().hasHandlers():
+    logging.basicConfig(level=logging.INFO)
 
 # ---------------------- SUPABASE INIT ----------------------
 load_dotenv()
@@ -18,13 +24,19 @@ OWNER_IDS = ["1279417773013078098", "1117143387695497278", "703364595321929730"]
 # ---------------------- POINTS HELPERS ----------------------
 def fetch_points():
     """Load all points from Supabase (normalize to ints)."""
-    res = supabase.table("points").select("*").execute()
+    try:
+        res = supabase.table("points").select("*").execute()
+        logger.debug("Fetched points from Supabase: rows=%s", len(res.data or []))
+    except Exception as e:
+        logger.exception("Failed to fetch points from Supabase: %s", e)
+        return {}
     points = {}
     for row in (res.data or []):
         points[str(row["user_id"])] = {
             "name": row.get("name", "Unknown"),
             "points": int(row.get("points", 0))
         }
+    logger.info("Loaded points for %d users", len(points))
     return points
 
 def save_points(points: dict):
@@ -37,7 +49,11 @@ def save_points(points: dict):
             "points": int(info.get("points", 0))
         })
     if payload:
-        supabase.table("points").upsert(payload).execute()
+        try:
+            supabase.table("points").upsert(payload).execute()
+            logger.info("Upserted %d point records to Supabase", len(payload))
+        except Exception as e:
+            logger.exception("Failed to upsert points to Supabase: %s", e)
 
 # === Data ===
 keys = [
@@ -71,7 +87,9 @@ enharmony = {
 # Normalize keys
 def normalize_key(key: str) -> str:
     key_title = key.strip().title()
-    return enharmony.get(key_title, key_title)
+    normalized = enharmony.get(key_title, key_title)
+    logger.debug("normalize_key: input=%r normalized=%r", key, normalized)
+    return normalized
 
 # Precompute normalized keys for lookup
 normalized_keys = [[normalize_key(k) for k in mode] for mode in keys]
@@ -79,30 +97,77 @@ normalized_keys = [[normalize_key(k) for k in mode] for mode in keys]
 # Flatten all keys for fuzzy autocomplete
 all_keys_flat = sorted({k for mode in normalized_keys for k in mode})
 
+# ----------------- Parent mode mapping & helpers -----------------
+# Map modes to their parent quality (major or minor)
+PARENT_QUALITY = {
+	"Major": "major",
+	"Ionian": "major",
+	"Lydian": "major",
+	"Mixolydian": "major",
+	"Minor": "minor",
+	"Aeolian": "minor",
+	"Dorian": "minor",
+	"Phrygian": "minor",
+	"Locrian": "minor"
+}
+
+def parse_key_name(key: str):
+    """Return (tonic, mode) from a normalized key like 'C# Phrygian'."""
+    parts = key.split()
+    if not parts:
+        return None, None
+    tonic = parts[0]
+    mode = " ".join(parts[1:]) if len(parts) > 1 else "Major"
+    logger.debug("parse_key_name: key=%r -> tonic=%r mode=%r", key, tonic, mode)
+    return tonic, mode
+
+def get_parent_quality(mode: str):
+	"""Return 'major' or 'minor' or None if unknown."""
+	return PARENT_QUALITY.get(mode.title())
+
 # ----------------- Semitone Calculation -----------------
 def calculate_semitones(key_1: str, key_2: str) -> str:
+    logger.info("calculate_semitones called with %r -> %r", key_1, key_2)
     key_1_norm = normalize_key(key_1)
     key_2_norm = normalize_key(key_2)
+
+    # Check parent-mode compatibility: same tonic must belong to same parent quality
+    tonic1, mode1 = parse_key_name(key_1_norm)
+    tonic2, mode2 = parse_key_name(key_2_norm)
+    parent1 = get_parent_quality(mode1) if mode1 else None
+    parent2 = get_parent_quality(mode2) if mode2 else None
+
+    if tonic1 and tonic2 and tonic1 == tonic2 and parent1 and parent2 and parent1 != parent2:
+        msg = f"{key_1_norm} ({mode1}) pairs with {parent1} parents like '{tonic1} {parent1.capitalize()}', not with {key_2_norm} ({mode2})."
+        logger.warning("Parent-quality mismatch: %s vs %s -> %s", mode1, mode2, msg)
+        return msg
 
     index_1 = index_2 = None
     for mode in normalized_keys:
         if index_1 is None and key_1_norm in mode:
             index_1 = mode.index(key_1_norm)
+            logger.debug("Found %r in mode at index %d", key_1_norm, index_1)
         if index_2 is None and key_2_norm in mode:
             index_2 = mode.index(key_2_norm)
+            logger.debug("Found %r in mode at index %d", key_2_norm, index_2)
         if index_1 is not None and index_2 is not None:
             break
 
     if index_1 is None and index_2 is None:
+        logger.error("Both keys unknown: %r, %r", key_1, key_2)
         return f"This idiot just made up 2 keys 🤣"
     elif index_1 is None:
-        return f"Man idk what the fuck a '{key_1}' is"
+        logger.error("Unknown key: %r", key_1)
+        return f"Man idk what a fuck a '{key_1}' is"
     elif index_2 is None:
-        return f"Man idk what the fuck a '{key_2}' is"
+        logger.error("Unknown key: %r", key_2)
+        return f"Man idk what a fuck a '{key_2}' is"
 
     diff = index_2 - index_1
     if diff == 0:
-        return f"No pitching needed for {key_1_norm} and {key_2_norm}."
+        msg = f"No pitching needed for {key_1_norm} and {key_2_norm}."
+        logger.info(msg)
+        return msg
 
     if diff > 6:
         diff -= 12
@@ -111,11 +176,14 @@ def calculate_semitones(key_1: str, key_2: str) -> str:
     diff_str = f"+{diff}" if diff > 0 else str(diff)
 
     if abs(diff) == 6:
-        return f"You need to pitch {key_1_norm} ±6 semitones to get to {key_2_norm}."
+        msg = f"You need to pitch {key_1_norm} ±6 semitones to get to {key_2_norm}."
     elif abs(diff) == 1:
-        return f"You need to pitch {key_1_norm} {diff_str} semitone to get to {key_2_norm}."
+        msg = f"You need to pitch {key_1_norm} {diff_str} semitone to get to {key_2_norm}."
     else:
-        return f"You need to pitch {key_1_norm} {diff_str} semitones to get to {key_2_norm}."
+        msg = f"You need to pitch {key_1_norm} {diff_str} semitones to get to {key_2_norm}."
+
+    logger.info("Calculated semitone diff: %s -> %s = %s", key_1_norm, key_2_norm, diff_str)
+    return msg
 
 # ----------------- Cog -----------------
 class SemitoneCalculator(commands.Cog):
@@ -126,6 +194,7 @@ class SemitoneCalculator(commands.Cog):
     async def key_autocomplete(self, interaction: discord.Interaction, current: str):
         # Fuzzy autocomplete for keys (flats preferred).
         matches = get_close_matches(current.title(), all_keys_flat, n=25, cutoff=0.1)
+        logger.debug("Autocomplete: user=%s current=%r matches=%d", interaction.user.id, current, len(matches))
         return [app_commands.Choice(name=m, value=m) for m in matches]
 
     @app_commands.command(
@@ -138,16 +207,21 @@ class SemitoneCalculator(commands.Cog):
     )
     @app_commands.autocomplete(key_from=key_autocomplete, key_to=key_autocomplete)
     async def semitone_calculator(self, interaction: discord.Interaction, key_from: str, key_to: str):
+        logger.info("Command invoked: semitone_calculator by user=%s (%s -> %s)", interaction.user.id, key_from, key_to)
         self.points = fetch_points()
         user_id = str(interaction.user.id)
 
         if random.randint(1, 1000) == 1:
+            # ensure user exists in points dict
+            self.points.setdefault(user_id, {"name": str(interaction.user), "points": 0})
             self.points[user_id]["points"] += 5000
+            logger.info("User %s won jackpot: +5000 (total=%d)", user_id, self.points[user_id]["points"])
             await interaction.response.send_message("You just won the slop lottery, you have received 5000 Slop Points")
             save_points(self.points)
             return
 
         result = calculate_semitones(key_from, key_to)
+        logger.info("Responding to user=%s result=%r", user_id, result)
         await interaction.response.send_message(result)
 
 async def setup(bot: commands.Bot):

@@ -113,6 +113,7 @@ COGS = [
     "butter",
     "ReplaceOtherBots",
     "scambanner",
+    "count_accept",
 ]
 
 # --- Events ---
