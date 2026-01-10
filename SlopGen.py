@@ -32,6 +32,7 @@ logging.basicConfig(
 # --- Blocked channels ---
 BLOCKED_CHANNEL_IDS = [
     1352915632936718386,
+    899784386038333555,
 ]
 
 # --- Supabase helpers ---
