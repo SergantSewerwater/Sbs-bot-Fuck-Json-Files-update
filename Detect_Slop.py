@@ -123,10 +123,10 @@ class ForumWatcher(commands.Cog):
             prefixes.append("dude what why did you make this your title")
 
         # Multi-condition checks
-        if song_author in ["knife party", "koraii", "waterflame"] and song in ["give it up", "time machine", "think about it"]:
+        if gd_author in ["knife party", "koraii", "waterflame"] and gd_song in ["give it up", "time machine", "think about it"]:
             prefixes.append("Rap")
 
-        if song_author in ["charlie draker & far too loud", "charlie draker", "waterflame", "paragonx9"] and song in ["control: crowd", "crowd control", "nail gun", "infiltration"]:
+        if gd_author in ["charlie draker & far too loud", "charlie draker", "waterflame", "paragonx9"] and gd_song in ["control: crowd", "crowd control", "nail gun", "infiltration"]:
             prefixes.append("Fast Rap")
 
         # include author-name based prefixes
