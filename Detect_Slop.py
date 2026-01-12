@@ -61,6 +61,9 @@ class ForumWatcher(commands.Cog):
         gd_song = parsed["gd_song"].lower().strip()
         song_author = parsed["song_author"].lower().strip()
         song = parsed["song"].lower().strip()
+        # split song author and song if it has commas for mega mashups
+        author_parts = [part.strip() for part in song_author.split(",")]
+        song_parts = [part.strip() for part in song.split(",")]
 
         print(f"🧩 Parsed title: {parsed}")
 
@@ -100,12 +103,13 @@ class ForumWatcher(commands.Cog):
         # === PREFIX SYSTEM ===
         prefixes = []
         # Song author based
-        if song_author == "tech n9ne":
-            prefixes.append("Tech N9ne")
-        if song_author in ["ke$ha", "kesha"]:
-            prefixes.append("Ke$ha")
-        if song_author == "bbno$":
-            prefixes.append("bbno")
+        for author in author_parts:
+            if author == "tech n9ne":
+                prefixes.append("Tech N9ne")
+            if author in ["ke$ha", "kesha"]:
+                prefixes.append("Ke$ha")
+            if author == "bbno$":
+                prefixes.append("bbno$")
  
 
         # GD song based
@@ -115,12 +119,15 @@ class ForumWatcher(commands.Cog):
             prefixes.append("flow")
 
         # Song based
-        if song == "rock that body":
-            prefixes.append("RTB")
+        for snog in song_parts:
+            if snog == "rock that body":
+                prefixes.append("RTB")
 
         # GD author based
         if gd_author == "uhhh idk any overused gdsong artists":
             prefixes.append("dude what why did you make this your title")
+        if gd_author == "hinkik":
+            prefixes.append("Hinkik")
 
         # Multi-condition checks
         if gd_author in ["knife party", "koraii", "waterflame"] and gd_song in ["give it up", "time machine", "think about it"]:
