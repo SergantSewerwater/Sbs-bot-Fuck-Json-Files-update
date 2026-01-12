@@ -90,11 +90,13 @@ class ForumWatcher(commands.Cog):
         single_messages = []
         if bonk_lucky:
             single_messages.append(bonk_gif)
-        if song == "applause":
-            single_messages.append("shlant rn: 🤤")
+        for snog in song_parts:
+            if snog == "applause":
+                single_messages.append("shlant rn: 🤤")
         # keep old song_author check and remove duplicate if we also map via author name
-        if song_author == "issbrokie":
-            single_messages.append("https://cdn.discordapp.com/attachments/899784386038333556/1444030885509730485/attachment.gif?ex=692b3a0f&is=6929e88f&hm=530ef4c052e44f0e1be95a2b5ac68cf8351eaae0397d8bb28a5b1b4100094b86&")
+        for author in author_parts:
+            if author == "issbrokie":
+                single_messages.append("https://cdn.discordapp.com/attachments/899784386038333556/1444030885509730485/attachment.gif?ex=692b3a0f&is=6929e88f&hm=530ef4c052e44f0e1be95a2b5ac68cf8351eaae0397d8bb28a5b1b4100094b86&")
 
         # include author-name based single messages
         if author_name in AUTHOR_SINGLE_MESSAGES:
@@ -141,18 +143,15 @@ class ForumWatcher(commands.Cog):
             prefixes.extend(AUTHOR_PREFIXES[author_name])
 
         # === FINAL MESSAGE ===
-        final_message = None
-        if single_messages and not prefixes:
-            final_message = " + ".join(single_messages)
-        elif prefixes and not single_messages:
-            final_message = f"{' '.join(prefixes)} slop"
-        elif prefixes and single_messages:
-            final_message = f"{' + '.join(single_messages)} + {' '.join(prefixes)} slop"
-
-        if final_message:
-            await thread.send(final_message)
-            print(f"✅ Sent message: {final_message}")
-        else:
+        if single_messages:
+            single_msg = " + ".join(single_messages)
+            await thread.send(single_msg)
+            print(f"✅ Sent single messages: {single_msg}")
+        if prefixes:
+            prefix_msg = f"{' '.join(prefixes)} slop"
+            await thread.send(prefix_msg)
+            print(f"✅ Sent prefix message: {prefix_msg}")
+        if not single_messages and not prefixes:
             print("ℹ️ No matching prefixes/author, no message sent.")
 
 
