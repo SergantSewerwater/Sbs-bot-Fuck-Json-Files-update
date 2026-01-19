@@ -9,6 +9,10 @@ class RacismRemover(commands.Cog):
         self.bot = bot
 
     @commands.Cog.listener()
+    async def on_raw_reaction_add(self):
+        print("REACTION") 
+
+    @commands.Cog.listener()
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member):
         if user.bot:
             return
