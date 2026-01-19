@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-CHANNEL_IDS = [90363092144449542, 1413643518139695224]
+CHANNEL_IDS = [903630921444495420, 1413643518139695224]
 EMOJIS = ["🇳", "🇷", "🇪", "🇮", "🇬"]
 
 class RacismRemover(commands.Cog):
@@ -11,7 +11,24 @@ class RacismRemover(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        print("REACTION FIRED")
+        # diagnostic thing
+        print("RAW EVENT FIRED")
+        print("payload.channel_id =", payload.channel_id)
+
+        channel = self.bot.get_channel(payload.channel_id)
+        print("channel object =", channel)
+
+        if isinstance(channel, discord.Thread):
+            print("This is a THREAD, parent =", channel.parent_id)
+        else:
+            print("This is NOT a thread")
+
+        if payload.channel_id not in CHANNEL_IDS:
+            print("Channel ID does NOT match filter")
+            return
+
+        print("Channel matched filter!")
+
         # Ignore bot reactions
         if payload.user_id == self.bot.user.id:
             return
