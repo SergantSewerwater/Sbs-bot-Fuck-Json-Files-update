@@ -14,61 +14,28 @@ class RacismRemover(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        # diagnostic thing
-        print("RAW EVENT FIRED")
-        print("payload.channel_id =", payload.channel_id)
-
-        channel = self.bot.get_channel(payload.channel_id)
-        print("channel object =", channel)
-
-        if isinstance(channel, discord.Thread):
-            print("This is a THREAD, parent =", channel.parent_id)
-        else:
-            print("This is NOT a thread")
-
-        if payload.channel_id not in CHANNEL_IDS:
-            print("Channel ID does NOT match filter")
-            return
-
-        print("Channel matched filter!")
-
-        # Ignore bot reactions
         if payload.user_id == self.bot.user.id:
             return
 
-        # Only watch specific channels
         if payload.channel_id not in CHANNEL_IDS:
             return
 
-        emoji = normalize_emoji(str(payload.emoji))
-
-        # Only watch specific emojis
+        emoji = str(payload.emoji).replace("\uFE0F", "")
         if emoji not in EMOJIS:
             return
 
-        print(
-            f"Reaction {emoji} added by user {payload.user_id} "
-            f"in channel {payload.channel_id}"
-        )
-
         channel = self.bot.get_channel(payload.channel_id)
-        if channel is None or not isinstance(channel, discord.TextChannel):
+        if channel is None:
             return
 
+        message = await channel.fetch_message(payload.message_id)
+
         try:
-            message = await channel.fetch_message(payload.message_id)
-            member = channel.guild.get_member(payload.user_id)
-
-            if member is None:
-                return
-
-            await message.remove_reaction(payload.emoji, member)
-            print(f"Removed {emoji} reaction from {member}")
-
+            user = discord.Object(id=payload.user_id)
+            await message.remove_reaction(payload.emoji, user)
+            print("Reaction removed successfully")
         except discord.Forbidden:
-            print("Missing permissions to remove reaction")
-        except discord.NotFound:
-            print("Message or reaction no longer exists")
+            print("Missing Manage Messages permission")
 
 async def setup(bot):
     await bot.add_cog(RacismRemover(bot))
