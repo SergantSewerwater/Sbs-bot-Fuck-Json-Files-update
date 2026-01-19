@@ -116,6 +116,7 @@ COGS = [
     "ReplaceOtherBots",
     "scambanner",
     "count_accept",
+    "anouncement",
 ]
 
 # --- Events ---
