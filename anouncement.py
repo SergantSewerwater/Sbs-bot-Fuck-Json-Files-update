@@ -1,0 +1,29 @@
+import discord
+from discord.ext import commands
+from discord import app_commands
+
+CHANNEL_IDS = [903630921444495420, 14136435181396952240]
+EMOJIS = ["🇳", "🇷", "🇪", "🇮", "🇬"]
+
+class RacismRemover(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User):
+        if user.bot:
+            return
+
+        if reaction.message.channel.id not in CHANNEL_IDS:
+            return
+        
+        for emoji in EMOJIS:
+            if reaction.emoji == emoji:
+                try:
+                    await reaction.message.remove_reaction(reaction.emoji, user)
+                    print()(f"Removed {emoji} reaction from {user} in channel {reaction.message.channel.name}.")
+                except discord.Forbidden:
+                    print()(f"Failed to remove reaction: missing permissions.")
+
+async def setup(bot):
+    await bot.add_cog(RacismRemover(bot))
