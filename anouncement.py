@@ -17,6 +17,8 @@ class RacismRemover(commands.Cog):
         if reaction.message.channel.id not in CHANNEL_IDS:
             return
         
+        print()(f"Reaction {reaction.emoji} added by {user} in channel {reaction.message.channel.name}.")
+        
         for emoji in EMOJIS:
             if reaction.emoji == emoji:
                 try:
