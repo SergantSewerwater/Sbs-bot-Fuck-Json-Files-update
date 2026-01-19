@@ -7,23 +7,47 @@ EMOJIS = ["🇳", "🇷", "🇪", "🇮", "🇬"]
 class RacismRemover(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        print("RacismRemover cog loaded")
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member):
-        if user.bot:
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        # Ignore bot reactions
+        if payload.user_id == self.bot.user.id:
             return
 
-        if reaction.message.channel.id not in CHANNEL_IDS:
+        # Only watch specific channels
+        if payload.channel_id not in CHANNEL_IDS:
             return
 
-        print(f"Reaction {reaction.emoji} added by {user} in {reaction.message.channel.name}")
+        emoji = str(payload.emoji)
 
-        if str(reaction.emoji) in EMOJIS:
-            try:
-                await reaction.message.remove_reaction(reaction.emoji, user)
-                print(f"Removed {reaction.emoji} from {user}")
-            except discord.Forbidden:
-                print("Missing permissions to remove reaction")
+        # Only watch specific emojis
+        if emoji not in EMOJIS:
+            return
+
+        print(
+            f"Reaction {emoji} added by user {payload.user_id} "
+            f"in channel {payload.channel_id}"
+        )
+
+        channel = self.bot.get_channel(payload.channel_id)
+        if channel is None or not isinstance(channel, discord.TextChannel):
+            return
+
+        try:
+            message = await channel.fetch_message(payload.message_id)
+            member = channel.guild.get_member(payload.user_id)
+
+            if member is None:
+                return
+
+            await message.remove_reaction(payload.emoji, member)
+            print(f"Removed {emoji} reaction from {member}")
+
+        except discord.Forbidden:
+            print("Missing permissions to remove reaction")
+        except discord.NotFound:
+            print("Message or reaction no longer exists")
 
 async def setup(bot):
     await bot.add_cog(RacismRemover(bot))
