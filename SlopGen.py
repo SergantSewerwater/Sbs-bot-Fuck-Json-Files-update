@@ -72,6 +72,7 @@ async def set_misc_value(attribute: str, value: int):
 
 # --- Bot setup ---
 intents = discord.Intents.default()
+intents.reactions = True
 intents.message_content = True
 intents.members = True
 
