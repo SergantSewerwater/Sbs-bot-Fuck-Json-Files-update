@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-CHANNEL_IDS = [903630921444495420, 14136435181396952240]
+CHANNEL_IDS = [90363092144449542, 1413643518139695224]
 EMOJIS = ["🇳", "🇷", "🇪", "🇮", "🇬"]
 
 class RacismRemover(commands.Cog):
