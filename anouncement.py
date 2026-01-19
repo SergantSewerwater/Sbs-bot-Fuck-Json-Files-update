@@ -1,6 +1,9 @@
 import discord
 from discord.ext import commands
 
+def normalize_emoji(e: str) -> str:
+    return e.replace("\uFE0F", "")
+
 CHANNEL_IDS = [903630921444495420, 1413643518139695224]
 EMOJIS = ["🇳", "🇷", "🇪", "🇮", "🇬"]
 
@@ -37,7 +40,7 @@ class RacismRemover(commands.Cog):
         if payload.channel_id not in CHANNEL_IDS:
             return
 
-        emoji = str(payload.emoji)
+        emoji = normalize_emoji(str(payload.emoji))
 
         # Only watch specific emojis
         if emoji not in EMOJIS:
