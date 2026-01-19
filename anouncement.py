@@ -9,7 +9,7 @@ class RacismRemover(commands.Cog):
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self):
+    async def on_raw_reaction_add(self, payload):
         print("REACTION") 
 
     @commands.Cog.listener()
