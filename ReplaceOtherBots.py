@@ -24,7 +24,7 @@ autoresponses = {
     "русский": "Этот чат только для англоговорящих",
     "showcase": "Don't understand how the \"showcase\" field in <#1352915632936718386> works? Put a YouTube link into the \"showcase\" field to use the thumbnail for your submission\nMake sure that thumbnail isn't already used on the site",
     "geode": "Version 2.208 of Geometry Dash broke Geode. Once the developers update Geode, it will work again.",
-    "jukebox": "Jukebox doesn't work because it relies on Geode, which was broken by version 2.208 of Geometry Dash. Once Geode and Jukebox are updated, it will work again.\nWant a tutorial on how to use Jukebox? You can find one [here](https://youtu.be/qfTO4nBLsbk?si=YGlr4J3DuRbYHcZ9)\nHaving problems with Jukebox? Read <#1201831020890951680> and <#1308752971743629363>\nIf you still have issues, report them in <#1302962232015192115>",
+    "jukebox": "Jukebox doesn't work because it relies on Geode, which was broken by version 2.208 of Geometry Dash. Once Geode and Jukebox are updated, it will work again.", # \nWant a tutorial on how to use Jukebox? You can find one [here](https://youtu.be/qfTO4nBLsbk?si=YGlr4J3DuRbYHcZ9)\nHaving problems with Jukebox? Read <#1201831020890951680> and <#1308752971743629363>\nIf you still have issues, report them in <#1302962232015192115>",
     "upload": "Wanna submit your own song(s)? Read the pinned post in <#1352870773588623404>",
     "submit": "Wanna submit your own song(s)? Read the pinned post in <#1352870773588623404>",
     "file": "Looking for certain songs? You can find them on Jukebox or our website\nhttps://www.songfilehub.com/",
