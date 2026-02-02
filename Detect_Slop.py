@@ -138,6 +138,9 @@ class ForumWatcher(commands.Cog):
         if gd_author in ["charlie draker & far too loud", "charlie draker", "waterflame", "paragonx9"] and gd_song in ["control: crowd", "crowd control", "nail gun", "infiltration"]:
             prefixes.append("Fast Rap")
 
+        if gd_author == "dayglow" and gd_song == "hot rod":
+            prefixes.append("Hot")
+
         # include author-name based prefixes
         if author_name in AUTHOR_PREFIXES:
             prefixes.extend(AUTHOR_PREFIXES[author_name])
