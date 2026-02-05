@@ -137,10 +137,7 @@ def calculate_semitones(key_1: str, key_2: str) -> str:
     parent1 = get_parent_quality(mode1) if mode1 else None
     parent2 = get_parent_quality(mode2) if mode2 else None
 
-    if tonic1 and tonic2 and tonic1 == tonic2 and parent1 and parent2 and parent1 != parent2:
-        msg = f"{key_1_norm} ({mode1}) pairs with {parent1} parents like '{tonic1} {parent1.capitalize()}', not with {key_2_norm} ({mode2})."
-        logger.warning("Parent-quality mismatch: %s vs %s -> %s", mode1, mode2, msg)
-        return msg
+    # Parent-quality mismatches are ignored for semitone calculations.
 
     index_1 = index_2 = None
     for mode in normalized_keys:
