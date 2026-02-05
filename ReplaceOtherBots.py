@@ -85,6 +85,10 @@ class ReplaceOtherBots(commands.Cog):
                     except Exception:
                         self.logger.exception("Failed to enqueue submit-channel message %s", message.id)
                     return
+                
+            # PHONK SO TUFF BOIIIIIIIIII
+            if "phonk" in message.content.lower():
+                await message.channel.send("<@906950993743314956>")
 
             # --- Auto responses in the target channel (with cooldowns)
             if message.channel.id == TARGET_CHANNEL_ID:

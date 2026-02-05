@@ -117,6 +117,7 @@ COGS = [
     "scambanner",
     "count_accept",
     "anouncement",
+    "some_ocerly_dramatic_name",
 ]
 
 # --- Events ---

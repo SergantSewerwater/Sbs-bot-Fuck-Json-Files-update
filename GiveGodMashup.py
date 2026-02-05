@@ -101,8 +101,8 @@ class GiveGodMashup(commands.Cog):
     # The actual command
     # -----------------------------
     @app_commands.command(
-        name="give_good_mashup",
-        description="Get a totally great and bangin' mashup"
+        name="give_sergeant_singing",
+        description="Get Sergeant's totally godly and amazing voice in your sbs bot"
     )
     async def give_good_mashup(self, interaction: discord.Interaction):
         self.points = fetch_points()

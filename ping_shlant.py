@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+import asyncio
 import os
 import random
 from supabase import create_client, Client
@@ -62,6 +63,17 @@ class PingShlant(commands.Cog):
 
         await interaction.response.send_message(f"<@530140140211798016>")
         return
+    
+    @app_commands.command(name="self_ban", description="ban yourslef")
+    async def self_ban(self, interaction: discord.Interaction):
+        id = interaction.user.id
+        await interaction.user.ban(reason="dumbass")
+        await asyncio.sleep(24*60*60)  # 24 hours
+        
+        try:
+            await interaction.guild.unban(discord.Object(id=id), reason="q")
+        except discord.NotFound:
+            pass  # user is not banned
 
 # cog loader
 async def setup(bot: commands.Bot):
