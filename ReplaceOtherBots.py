@@ -96,6 +96,7 @@ class ReplaceOtherBots(commands.Cog):
             # PHONK SO TUFF BOIIIIIIIIII
             if "phonk" in message.content.lower():
                 await message.channel.send("<@906950993743314956>")
+                return
 
             # --- Auto responses in the target channel (with cooldowns)
             if message.channel.id == TARGET_CHANNEL_ID:
