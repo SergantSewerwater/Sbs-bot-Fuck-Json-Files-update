@@ -47,10 +47,9 @@ class ReplaceOtherBots(commands.Cog):
         self.bot = bot
         self.logger = logger
 
-        # NOTE: submit-channel deletion and sticky behavior are disabled to avoid extra API calls / rate limits.
-        # Queue for batching submit-channel deletes (disabled)
+        # Queue for batching submit-channel deletes
         self._submit_delete_queue: Optional[asyncio.Queue] = None
-        # Task processing the queue (disabled)
+        # Task processing the queue
         self._submit_deleter_task: Optional[asyncio.Task] = None
 
         # Sticky state per channel (kept as a note only)
@@ -255,4 +254,4 @@ async def setup(bot: commands.Bot):
     logger.info("Registering ReplaceOtherBots cog (MemberCount disabled)")
     await bot.add_cog(ReplaceOtherBots(bot))
     # MemberCount cog registration removed/disabled to prevent unnecessary updates:
-    await bot.add_cog(MemberCount(bot))
+    # await bot.add_cog(MemberCount(bot))
