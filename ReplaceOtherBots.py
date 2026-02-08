@@ -62,7 +62,7 @@ class ReplaceOtherBots(commands.Cog):
         self._autoresponse_cooldown_seconds = 30.0
 
     async def cog_unload(self):
-        # Cancel background task on cog unload if it exists (no-op when disabled)
+        # Cancel background task on cog unload if it exists
         if getattr(self, "_submit_deleter_task", None):
             try:
                 self._submit_deleter_task.cancel()
@@ -79,7 +79,7 @@ class ReplaceOtherBots(commands.Cog):
             return
 
         try:
-            # --- Delete stuff in #submit-here (disabled)
+            # --- Delete stuff in #submit-here
             if message.channel.id == SUBMIT_CHANNEL_ID:
                 if message.author.id != 1272790489380421643:
                     if DISABLE_UNUSED_FEATURES:
