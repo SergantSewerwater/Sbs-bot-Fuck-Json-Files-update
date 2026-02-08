@@ -51,6 +51,7 @@ TEMP_DIR = Path(os.getenv("TEMP_AUDIO_PATH", "temp_audio"))
 TEMP_DIR.mkdir(exist_ok=True, parents=True)
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB cap
+WARNING_MSG = "⚠️ Warning: the pitches that this bot creates are not high quality. They may not be good enough to be accepted. Especially if pitches are over 2 semitones"
 
 def pitch_shift(source, dest, semitones):
     factor = 2 ** (semitones / 12)
@@ -120,7 +121,7 @@ class PitchStretch(commands.Cog):
             pitch_shift(input_path, output_path, semitones)
 
             await interaction.followup.send(
-                f"✅ Pitched `{file.filename}` by {semitones} semitones.",
+                f"✅ Pitched `{file.filename}` by {semitones} semitones.\n{WARNING_MSG}",
                 file=discord.File(output_path),
             )
 
