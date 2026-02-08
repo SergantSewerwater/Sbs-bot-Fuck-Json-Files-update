@@ -121,100 +121,100 @@ class ReplaceOtherBots(commands.Cog):
                             return
 
             # --- Sticky message behavior (debounced, delete by id if possible)
-           # if STICKY_CONTENT and message.channel.id in STICKY_CHANNELS:
-           #     if message.author != self.bot.user:
-           #         state = self._sticky_state[message.channel.id]
-           #         now = time.time()
-           #         last_post = state.get("last_post") or 0.0
-           #         if now - last_post < self._sticky_cooldown:
-           #             self.logger.debug("Sticky cooldown active for channel %s", message.channel.id)
-           #         else:
-           #             # Try to delete previous sticky by id
-           #             last_msg_id = state.get("last_msg_id")
-           #             deleted = False
-           #             if last_msg_id is not None:
-           #                 try:
-           #                     msg = await message.channel.fetch_message(int(last_msg_id))
-           #                     if msg and msg.author == self.bot.user:
-           #                         await msg.delete()
-           #                         deleted = True
-           #                         self.logger.debug("Deleted previous sticky message %s in channel %s", last_msg_id, message.channel.id)
-           #                 except discord.NotFound:
-           #                     self.logger.debug("Previous sticky message %s not found", last_msg_id)
-           #                 except Exception:
-           #                     self.logger.exception("Failed to delete sticky message %s", last_msg_id)
-#
- #                       # If no last_msg_id or deletion failed, try a small history scan but limit work
-  #                      if not deleted and last_msg_id is None:
-   #                         try:
-    #                            async for msg in message.channel.history(limit=20):
-     #                               if msg.author == self.bot.user and msg.content == STICKY_CONTENT:
-      #                                  try:
-       #                                     await msg.delete()
-        #                                    self.logger.debug("Deleted previous sticky message %s found by scan in channel %s", msg.id, message.channel.id)
-         #                                   deleted = True
-          #                                  break
-           #                             except Exception:
-            #                                self.logger.exception("Failed to delete old sticky message found by scan %s", msg.id)
-             #               except Exception:
-              #                  self.logger.exception("Failed scanning history for sticky message in channel %s", message.channel.id)
-#
- #                       # Post new sticky and record id/time
-  #                      try:
-   #                         sent = await message.channel.send(STICKY_CONTENT)
-    #                        state["last_msg_id"] = int(getattr(sent, "id", 0)) if getattr(sent, "id", None) is not None else None
-     #                       state["last_post"] = now
-      #                      self.logger.info("Posted sticky message %s in channel %s", state["last_msg_id"], message.channel.id)
-       #                 except discord.HTTPException:
-        #                    self.logger.exception("Failed to post sticky message in channel %s", message.channel.id)
-#
- #       except Exception:
-  #          self.logger.exception("Uncaught exception in ReplaceOtherBots.on_message")
-   #     finally:
-            # Ensure commands still work when on_message is present
-    #        await self.bot.process_commands(message)
-#
- #   async def _submit_deleter_loop(self):
-  #      """Background task that batches deletions from the submit channel to use bulk delete and avoid rate limits."""
-   #     try:
-    #        while True:
-     #           batch: List[discord.Message] = []
-      #          try:
-       #             # Wait up to 2 seconds for at least one message
-        #            msg = await asyncio.wait_for(self._submit_delete_queue.get(), timeout=2.0)
-         #           batch.append(msg)
-          #      except asyncio.TimeoutError:
-           #         # no message in queue this interval
-            #        pass
-#
- #               # Drain queue quickly for up to a short burst window
-  #              start = time.time()
-   #             while len(batch) < 100 and (time.time() - start) < 1.0:
-    #                try:
-     #                   msg = self._submit_delete_queue.get_nowait()
-      #                  batch.append(msg)
-    #                except asyncio.QueueEmpty:
-     #                   break
+            if STICKY_CONTENT and message.channel.id in STICKY_CHANNELS:
+                if message.author != self.bot.user:
+                    state = self._sticky_state[message.channel.id]
+                    now = time.time()
+                    last_post = state.get("last_post") or 0.0
+                    if now - last_post < self._sticky_cooldown:
+                        self.logger.debug("Sticky cooldown active for channel %s", message.channel.id)
+                    else:
+                        # Try to delete previous sticky by id
+                        last_msg_id = state.get("last_msg_id")
+                        deleted = False
+                        if last_msg_id is not None:
+                            try:
+                                msg = await message.channel.fetch_message(int(last_msg_id))
+                                if msg and msg.author == self.bot.user:
+                                    await msg.delete()
+                                    deleted = True
+                                    self.logger.debug("Deleted previous sticky message %s in channel %s", last_msg_id, message.channel.id)
+                            except discord.NotFound:
+                                self.logger.debug("Previous sticky message %s not found", last_msg_id)
+                            except Exception:
+                                self.logger.exception("Failed to delete sticky message %s", last_msg_id)
 
-      #          if not batch:
-        #            await asyncio.sleep(0.1)
-       #             continue
+                            # If no last_msg_id or deletion failed, try a small history scan but limit work
+                            if not deleted and last_msg_id is None:
+                                try:
+                                    async for msg in message.channel.history(limit=20):
+                                        if msg.author == self.bot.user and msg.content == STICKY_CONTENT:
+                                            try:
+                                                await msg.delete()
+                                                self.logger.debug("Deleted previous sticky message %s found by scan in channel %s", msg.id, message.channel.id)
+                                                deleted = True
+                                                break
+                                            except Exception:
+                                                self.logger.exception("Failed to delete old sticky message found by scan %s", msg.id)
+                                except Exception:
+                                    self.logger.exception("Failed scanning history for sticky message in channel %s", message.channel.id)
+
+                            # Post new sticky and record id/time
+                            try:
+                                sent = await message.channel.send(STICKY_CONTENT)
+                                state["last_msg_id"] = int(getattr(sent, "id", 0)) if getattr(sent, "id", None) is not None else None
+                                state["last_post"] = now
+                                self.logger.info("Posted sticky message %s in channel %s", state["last_msg_id"], message.channel.id)
+                            except discord.HTTPException:
+                                self.logger.exception("Failed to post sticky message in channel %s", message.channel.id)
+
+        except Exception:
+            self.logger.exception("Uncaught exception in ReplaceOtherBots.on_message")
+        finally:
+            # Ensure commands still work when on_message is present
+            await self.bot.process_commands(message)
+
+    async def _submit_deleter_loop(self):
+        """Background task that batches deletions from the submit channel to use bulk delete and avoid rate limits."""
+        try:
+            while True:
+                batch: List[discord.Message] = []
+                try:
+                    # Wait up to 2 seconds for at least one message
+                    msg = await asyncio.wait_for(self._submit_delete_queue.get(), timeout=2.0)
+                    batch.append(msg)
+                except asyncio.TimeoutError:
+                    # no message in queue this interval
+                    pass
+
+                # Drain queue quickly for up to a short burst window
+                start = time.time()
+                while len(batch) < 100 and (time.time() - start) < 1.0:
+                    try:
+                        msg = self._submit_delete_queue.get_nowait()
+                        batch.append(msg)
+                    except asyncio.QueueEmpty:
+                        break
+
+                if not batch:
+                    await asyncio.sleep(0.1)
+                    continue
 
                 # Group by channel for bulk deletes
-          #      by_channel: Dict[int, List[discord.Message]] = defaultdict(list)
-         #       for m in batch:
-           #         by_channel[m.channel.id].append(m)
-#
- #               for chan_id, msgs in by_channel.items():
-  #                  channel = msgs[0].channel
-   #                 # Attempt bulk delete for messages younger than 14 days on a TextChannel
-    #                if isinstance(channel, discord.TextChannel):
-     #                   try:
-      #                      # delete_messages expects a list of message objects and will use bulk delete where possible
+                by_channel: Dict[int, List[discord.Message]] = defaultdict(list)
+                for m in batch:
+                    by_channel[m.channel.id].append(m)
+
+                for chan_id, msgs in by_channel.items():
+                    channel = msgs[0].channel
+                    # Attempt bulk delete for messages younger than 14 days on a TextChannel
+                    if isinstance(channel, discord.TextChannel):
+                        try:
+                            # delete_messages expects a list of message objects and will use bulk delete where possible
                             await channel.delete_messages(msgs)
                             self.logger.info("Bulk deleted %s messages in channel %s", len(msgs), chan_id)
-        #                except Exception:
-       #                     # Fall back to individual deletes if bulk delete fails
+                        except Exception:
+                            # Fall back to individual deletes if bulk delete fails
                             self.logger.exception("Bulk delete failed for channel %s, falling back to single deletes", chan_id)
                             for m in msgs:
                                 try:
@@ -222,9 +222,9 @@ class ReplaceOtherBots(commands.Cog):
                                     await asyncio.sleep(0.2)  # small pause to avoid hitting rate limits
                                 except Exception:
                                     self.logger.exception("Failed to delete message %s individually", getattr(m, 'id', None))
-       #             else:
+                    else:
                         # Not a text channel (e.g., DM); delete individually
-     #                   for m in msgs:
+                        for m in msgs:
                             try:
                                 await m.delete()
                                 await asyncio.sleep(0.2)
@@ -232,27 +232,27 @@ class ReplaceOtherBots(commands.Cog):
                                 self.logger.exception("Failed to delete message %s in non-text channel", getattr(m, 'id', None))
 
                 # Sleep a short time between batches to reduce rate of requests
-       #         await asyncio.sleep(0.5)
-   #     except asyncio.CancelledError:
-   #         self.logger.info("Submit deleter background task cancelled")
-   #     except Exception:
-    #        self.logger.exception("Submit deleter encountered an error and stopped")
+                await asyncio.sleep(0.5)
+        except asyncio.CancelledError:
+            self.logger.info("Submit deleter background task cancelled")
+        except Exception:
+            self.logger.exception("Submit deleter encountered an error and stopped")
 
-# --- StickyBot (disabled notes) ---
-# STICKY_CHANNELS = {
-#  1453008993692942436
-# }
-#
-# STICKY_CONTENT = ""
-#
-# --- Member Count (disabled) ---
-# MEMBER_COUNT_CHANNEL_ID = 1453041413989072958
-#
-# class MemberCount(commands.Cog):
-#     ... (disabled - left as notes to avoid running extra API calls) ...
+# --- StickyBot ---
+STICKY_CHANNELS = {
+    1453008993692942436
+}
+
+STICKY_CONTENT = ""
+
+# --- Member Count ---
+MEMBER_COUNT_CHANNEL_ID = 1453041413989072958
+
+class MemberCount(commands.Cog):
+    ... # (disabled - left as notes to avoid running extra API calls) ...
 
 async def setup(bot: commands.Bot):
     logger.info("Registering ReplaceOtherBots cog (MemberCount disabled)")
     await bot.add_cog(ReplaceOtherBots(bot))
     # MemberCount cog registration removed/disabled to prevent unnecessary updates:
-    # await bot.add_cog(MemberCount(bot))
+    await bot.add_cog(MemberCount(bot))
