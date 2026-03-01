@@ -12,7 +12,7 @@ from pathlib import Path
 # CONFIG
 # =====================
 
-TARGET_CHANNEL_ID = 1475506808826101924  # temp testing channel
+TARGET_CHANNEL_ID = 899784386038333555
 IGNORED_ROLE_ID = 1429783971654406195
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
