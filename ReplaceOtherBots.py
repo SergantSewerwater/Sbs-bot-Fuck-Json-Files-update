@@ -60,10 +60,6 @@ autoresponses = {
         "Put a YouTube link into the showcase field so the site can generate a thumbnail.\n"
         "Make sure the thumbnail is not already used."
     ),
-    "geode": (
-        "Geometry Dash 2.208 broke Geode.\n"
-        "Once Geode is updated, it will work again."
-    ),
     "jukebox": (
         "Want a Jukebox tutorial? https://youtu.be/qfTO4nBLsbk\n"
         "Problems? Read <#1201831020890951680> and <#1308752971743629363>\n"
