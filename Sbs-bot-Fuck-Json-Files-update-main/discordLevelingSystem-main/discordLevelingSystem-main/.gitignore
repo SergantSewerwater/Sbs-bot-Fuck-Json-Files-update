@@ -1,0 +1,10 @@
+bot.py
+card.png
+DiscordLevelingSystem.db
+SPS_Data.db
+
+.vscode/*
+cogs/*
+discordLevelingSystem/__pycache__/*
+discordLevelingSystem.egg-info/*
+dist/*
