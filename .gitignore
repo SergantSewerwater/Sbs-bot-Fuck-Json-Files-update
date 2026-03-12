@@ -1,0 +1,26 @@
+# Message Sender GUI
+message_sender_gui.py
+message_config.json
+.env
+
+# Environment
+.venv/
+venv/
+__pycache__/
+
+# Logs
+*.log
+discord.log
+
+# Database
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
