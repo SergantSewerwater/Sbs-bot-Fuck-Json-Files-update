@@ -1,4 +1,5 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
 import logging
 import logging.handlers
@@ -124,36 +125,39 @@ def ai_pick_autoresponse(message: str) -> Optional[str]:
 class ReplaceOtherBots(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.queue: asyncio.Queue[discord.Message] = asyncio.Queue()
-        self.worker_task = bot.loop.create_task(self._ai_worker())
         self.sticky_enabled = True
         self._sticky_state = defaultdict(dict)
+        self._sticky_cooldown = 5  # seconds
 
-    def cog_unload(self):
-        self.worker_task.cancel()
-
-    # ---------------------
-    # Sticky toggle command
-    # ---------------------
-    @commands.command(name="sticky")
-    async def sticky_toggle(self, ctx: commands.Context, state: str = None):
-        if ctx.guild is None or ctx.guild.id != STICKY_CONTROL_GUILD:
-            return
-
+    # =====================
+    # Sticky slash command
+    # =====================
+    @app_commands.command(name="sticky", description="Enable or disable sticky messages")
+    @app_commands.describe(state="Turn sticky messages on or off")
+    @app_commands.guilds(discord.Object(id=STICKY_CONTROL_GUILD))
+    async def sticky_slash(self, interaction: discord.Interaction, state: str = None):
         if state is None:
             status = "ON" if self.sticky_enabled else "OFF"
-            await ctx.send(f"Sticky messages are currently **{status}**.")
+            await interaction.response.send_message(f"Sticky messages are currently **{status}**.", ephemeral=True)
             return
 
         state = state.lower()
         if state in ("on", "enable", "enabled"):
             self.sticky_enabled = True
-            await ctx.send("✅ Sticky messages **enabled**.")
+            await interaction.response.send_message("✅ Sticky messages **enabled**.", ephemeral=True)
         elif state in ("off", "disable", "disabled"):
             self.sticky_enabled = False
-            await ctx.send("⛔ Sticky messages **disabled**.")
+            await interaction.response.send_message("⛔ Sticky messages **disabled**.", ephemeral=True)
         else:
-            await ctx.send(f"Usage: `{BOT_PREFIX} sticky on` or `{BOT_PREFIX} sticky off`")
+            await interaction.response.send_message("Usage: `/sticky on` or `/sticky off`", ephemeral=True)
+
+    # =====================
+    # Setup to add command
+    # =====================
+    async def cog_load(self):
+        # Sync the slash command to your guild
+        self.bot.tree.add_command(self.sticky_slash)
+        await self.bot.tree.sync(guild=discord.Object(id=STICKY_CONTROL_GUILD))
 
     # ---------------------
     # AI worker
