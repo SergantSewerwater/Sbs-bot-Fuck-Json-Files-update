@@ -20,7 +20,7 @@ OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "mistral"
 
 # Sticky system
-STICKY_CONTENT = "Jukebox is DOWN we are aware!"
+STICKY_CONTENT = "Jukebox servers are down. We're trying to fix it."
 STICKY_CHANNELS = {899784386038333555}
 
 STICKY_CONTROL_GUILD = 1411767823730085971
