@@ -1,26 +1,5 @@
-# Message Sender GUI
-message_sender_gui.py
-message_config.json
+__pycache__
+.venv
 .env
-
-# Environment
-.venv/
-venv/
-__pycache__/
-
-# Logs
-*.log
-discord.log
-
-# Database
-*.db
-*.sqlite
-
-# IDE
-.vscode/
-.idea/
-*.pyc
-
-# OS
-.DS_Store
-Thumbs.db
+credentials.json
+ goodmashup_credentials.json
