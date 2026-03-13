@@ -69,15 +69,54 @@ autoresponses = {
     "submit": "Wanna submit your own song or NONG? Read the pinned post.",
     "song": "Looking for songs or NONGs? Use Jukebox or https://www.songfilehub.com/",
     "ai proof": "The AI Proof role prevents bot auto-responses.",
+    "no_loop": "Song not looping after death? This is not an issue with jukebox, it is an issue with geometry dash, and we have no way of fixing it",
+    "web_request": "Having web request failed errors? We currently have no idea why this happens and no clue how to fix it",
     "generic_help": "Have questions? Read the pinned help channels.",
 }
 
 # =====================
-# AI PROMPT TEMPLATE
+# AI PROMPT
 # =====================
 
 AI_PROMPT_TEMPLATE = """
+You are NOT a chatbot.
 You are an intent classifier for an FAQ autoresponder bot.
+
+This bot runs in the SongFileHub Discord server.
+
+=== CONTEXT ===
+SongFileHub is a database storing NONGs for use in geometry dash
+A NONG is a song not available in the normal Geometry Dash song library
+Jukebox is a mod for geometry dash that makes using NONGs from the SongFileHub database easier
+To get a NONG on the database users have to submit via the SongFileHub discord server in a submission form
+
+
+The following is context regarding each keyword, these are simply guidelines.
+
+spanish: use when someone speaks spanish
+russian: use when someone speaks russian
+showcase: use when someone asks or is confused about the showcase system in the submission forms, not for when they ask to submit as a whole, just for showcases
+jukebox: for when someone asks about a specific jukebox feature.
+submit: for when someone asks how to submit something.
+song: for when someone asks how to get a specific song, 
+ai proof: for when someone asks about the ai proof role
+web_request: a common error users may encounter with the jukebox mod displays a web request error and a negative number for example "web request failed -60", use this keyword if you believe a user is struggeling with such an error
+no_loop: a common bug in the jukebox mod is when songs dont loop after death, use this keyword if you believe a user is experiencing this issue
+generic_help: for when someone asks a question that is asking for support/help regarding geometry dash, songfilehub or jukebox but it doesnt fit any other keywords.
+
+=== TASK ===
+Decide whether the message is asking a COMMON FAQ question.
+If yes:
+- Return the BEST matching key
+
+If no:
+- Return NONE
+
+=== RULES ===
+- Output ONE key or NONE
+- No explanations
+- If unsure → NONE
+- If vague → NONE
 
 === KEYS ===
 {keys}
@@ -85,7 +124,7 @@ You are an intent classifier for an FAQ autoresponder bot.
 === MESSAGE ===
 "{message}"
 
-Respond with only ONE key or NONE.
+Respond with ONLY ONE key or NONE.
 """
 
 # =====================
