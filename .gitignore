@@ -3,3 +3,7 @@ __pycache__
 .env
 credentials.json
 goodmashup_credentials.json
+logs/
+discord.log
+DiscordLevelingSystem.db
+processed_threads.json

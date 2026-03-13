@@ -14,7 +14,7 @@ from collections import defaultdict
 # =====================
 
 BOT_PREFIX = "slop"
-TARGET_CHANNEL_ID = 1475506808826101924
+TARGET_CHANNEL_ID = 1411767828750532630
 IGNORED_ROLE_ID = 1429783971654406195
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -69,8 +69,8 @@ autoresponses = {
     "submit": "Wanna submit your own song or NONG? Read the pinned post.",
     "song": "Looking for songs or NONGs? Use Jukebox or https://www.songfilehub.com/",
     "ai proof": "The AI Proof role prevents bot auto-responses.",
-    "no_loop": "Song not looping after death? This is not an issue with jukebox, it is an issue with geometry dash, and we have no way of fixing it",
-    "web_request": "Having web request failed errors? We currently have no idea why this happens and no clue how to fix it",
+    "no_loop": "Song not looping after death? This is not an issue with jukebox, it is an issue with geometry dash, and we have no way of fixing it.",
+    "web_request": "Having web request failed errors? We currently have no idea why this happens and no clue how to fix it.",
     "generic_help": "Have questions? Read the pinned help channels.",
 }
 
@@ -100,8 +100,8 @@ jukebox: for when someone asks about a specific jukebox feature.
 submit: for when someone asks how to submit something.
 song: for when someone asks how to get a specific song, 
 ai proof: for when someone asks about the ai proof role
-web_request: a common error users may encounter with the jukebox mod displays a web request error and a negative number for example "web request failed -60", use this keyword if you believe a user is struggeling with such an error
-no_loop: a common bug in the jukebox mod is when songs dont loop after death, use this keyword if you believe a user is experiencing this issue
+web_request: a common error users may encounter with the jukebox mod displays a web request error and a negative number for example "web request failed -60", use this keyword if you believe a user is struggeling with such an error.
+no_loop: a common bug in the jukebox mod is when songs dont loop after death, use this keyword if you believe a user is experiencing this issue.
 generic_help: for when someone asks a question that is asking for support/help regarding geometry dash, songfilehub or jukebox but it doesnt fit any other keywords.
 
 === TASK ===
@@ -165,7 +165,7 @@ class ReplaceOtherBots(commands.Cog):
         self.bot = bot
         self.queue: asyncio.Queue[discord.Message] = asyncio.Queue()
         self.worker_task = bot.loop.create_task(self._ai_worker())
-        self.sticky_enabled = True
+        self.sticky_enabled = False
         self._sticky_state = defaultdict(dict)
 
     def cog_unload(self):
