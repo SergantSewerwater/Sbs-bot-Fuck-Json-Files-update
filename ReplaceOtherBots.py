@@ -14,7 +14,7 @@ from collections import defaultdict
 # =====================
 
 BOT_PREFIX = "slop"
-TARGET_CHANNEL_ID = 1411767828750532630
+TARGET_CHANNEL_ID = 899784386038333555
 IGNORED_ROLE_ID = 1429783971654406195
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
