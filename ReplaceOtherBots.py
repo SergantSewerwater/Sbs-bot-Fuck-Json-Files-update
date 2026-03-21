@@ -54,25 +54,26 @@ logger.addHandler(console_handler)
 # AUTORESPONSES
 # =====================
 
-autoresponses = {
-    "spanish": "Este chat es solo en inglés.",
-    "russian": "Этот чат только для англоговорящих",
-    "showcase": (
-        "Don't understand how the \"showcase\" field works?\n"
-        "Put a YouTube link so the site can generate a thumbnail.\n"
-        "Make sure the thumbnail is not already used."
-    ),
-    "jukebox": (
-        "Want a Jukebox tutorial? https://youtu.be/qfTO4nBLsbk\n"
-        "Problems? Read pinned posts for help.\n"
-    ),
-    "submit": "Wanna submit your own song or NONG? Read the pinned post.",
-    "song": "Looking for songs or NONGs? Use Jukebox or https://www.songfilehub.com/",
-    "ai proof": "The AI Proof role prevents bot auto-responses.",
-    "no_loop": "Song not looping after death? This is not an issue with jukebox, it is an issue with geometry dash, and we have no way of fixing it.",
-    "web_request": "Having web request failed errors? We currently have no idea why this happens and no clue how to fix it.",
-    "generic_help": "Have questions? Read the pinned help channels.",
-}
+autoresponses = { "spanish": "Este chat es solo en inglés.", 
+                 "russian": "Этот чат только для англоговорящих", 
+                 "showcase": ( 
+                     "Don't understand how the \"showcase\" field in <#1352915632936718386> works?\n" 
+                     "Put a YouTube link into the showcase field so the site can generate a thumbnail.\n" 
+                     "Make sure the thumbnail is not already used." ), 
+                     "geode": ( 
+                         "Geometry Dash 2.208 broke Geode.\n" 
+                         "Once Geode is updated, it will work again." ), 
+                         "jukebox": ( 
+                        "Want a Jukebox tutorial? https://youtu.be/qfTO4nBLsbk\n"
+                        "Problems? Read <#1201831020890951680> and <#1308752971743629363>\n"
+                        "Still broken? Report in <#1302962232015192115>" ),
+                         "submit": "Wanna submit your own song or NONG? Read the pinned post in <#1352870773588623404>", 
+                        "song": "Looking for songs or NONGs? Use Jukebox or https://www.songfilehub.com/",
+                    "ai proof": ( 
+                        "The AI Proof role prevents bot auto-responses.\n"
+                     "You receive it after reaching level 2." ), 
+                    "generic_help": ( 
+                        "Have questions? Read <#1201831020890951680> and the pinned post in " "<#1352870773588623404>\nOtherwise, go to <#1302962232015192115>" ), }
 
 # =====================
 # AI PROMPT
