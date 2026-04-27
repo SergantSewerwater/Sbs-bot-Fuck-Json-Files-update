@@ -6,6 +6,7 @@ import os
 import random
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from Find_Key import songdata
 
 # ---------------------- SUPABASE INIT ----------------------
 load_dotenv()
@@ -66,14 +67,19 @@ class PingShlant(commands.Cog):
     
     @app_commands.command(name="self_ban", description="ban yourslef")
     async def self_ban(self, interaction: discord.Interaction):
-        id = interaction.user.id
-        await interaction.user.ban(reason="dumbass")
-        await asyncio.sleep(24*60*60)  # 24 hours
+        await interaction.response.defer()
         
-        try:
-            await interaction.guild.unban(discord.Object(id=id), reason="q")
-        except discord.NotFound:
-            pass  # user is not banned
+        songs_174 = [name for name, data in songdata.items() if data.get("bpm") == 174]
+        
+        if songs_174:
+            message = "Songs with 174 BPM:\n" + "\n".join(songs_174)
+            try:
+                await interaction.user.send(message)
+                await interaction.followup.send("DM sent with 174 BPM songs!")
+            except discord.Forbidden:
+                await interaction.followup.send("I couldn't DM you. Please enable DMs from server members.")
+        else:
+            await interaction.followup.send("No songs found with 174 BPM.")
 
 # cog loader
 async def setup(bot: commands.Bot):
