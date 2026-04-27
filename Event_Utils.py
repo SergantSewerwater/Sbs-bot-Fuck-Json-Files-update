@@ -13,7 +13,8 @@ class EventUtils(commands.Cog):
     async def check_submissions(self, interaction: discord.Interaction, date: str):
         # Check if user has the required role
         required_role_id = 899796185966075905
-        if not any(role.id == required_role_id for role in interaction.user.roles):
+        member = interaction.guild.get_member(interaction.user.id) if interaction.guild else None
+        if not member or not any(role.id == required_role_id for role in member.roles):
             await interaction.response.send_message("❌ You do not have permission to use this command.")
             return
 
@@ -48,12 +49,12 @@ class EventUtils(commands.Cog):
             async for thread in channel.archived_threads(limit=1000):
                 total_threads_checked += 1
                 # Check if thread has the tag and is after the date
-                if tag_id in [tag.id for tag in thread.applied_tags] and thread.created_at >= after_date:
+                if tag_id in [tag.id for tag in thread.applied_tags] and thread.created_at and thread.created_at >= after_date:
                     logging.info(f"Found submission: {thread.name}, created: {thread.created_at}, tags: {[t.name for t in thread.applied_tags]}")
                     submissions.append(thread)
             for thread in channel.threads:
                 total_threads_checked += 1
-                if tag_id in [tag.id for tag in thread.applied_tags] and thread.created_at >= after_date:
+                if tag_id in [tag.id for tag in thread.applied_tags] and thread.created_at and thread.created_at >= after_date:
                     logging.info(f"Found submission: {thread.name}, created: {thread.created_at}, tags: {[t.name for t in thread.applied_tags]}")
                     submissions.append(thread)
         except Exception as e:
