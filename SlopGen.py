@@ -142,6 +142,7 @@ COGS = [
     "count_accept",
     "anouncement",
     "some_ocerly_dramatic_name",
+    "keyword_reactions",
 ]
 
 # --- Events ---
